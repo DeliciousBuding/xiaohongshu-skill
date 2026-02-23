@@ -1,6 +1,8 @@
 # xiaohongshu-skill
 
-一个用于 [小红书](https://www.xiaohongshu.com)（RED）的 Claude Code Skill，基于 Python + Playwright 浏览器自动化实现。
+一个用于 [小红书](https://www.xiaohongshu.com)（rednote）的 AI Agent Skill，基于 Python + Playwright 浏览器自动化实现。
+
+同时兼容 **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** 和 **[OpenClaw](https://openclaw.com)**，遵循 [AgentSkills](https://agentskills.io) 开放规范。
 
 支持搜索笔记、提取帖子详情、查看用户主页、二维码扫码登录，并内置反爬保护机制。
 
@@ -78,7 +80,7 @@ python -m scripts user <user_id> [xsec_token]
 
 ```
 xiaohongshu-skill/
-├── SKILL.md              # Skill 规范文件（供 Claude Code 识别）
+├── SKILL.md              # Skill 规范文件（兼容 Claude Code + OpenClaw）
 ├── README.md             # 项目文档
 ├── requirements.txt      # Python 依赖
 ├── LICENSE               # MIT 许可证
@@ -147,9 +149,27 @@ xiaohongshu-skill/
 - Python 3.10+
 - Playwright >= 1.40.0
 
-## 作为 Claude Code Skill 使用
+## 作为 AI Agent Skill 使用
 
-本项目遵循 [Agent Skills 规范](https://agentskills.io/specification)。将 `SKILL.md` 添加到你的 Claude Code 配置中即可作为 Skill 使用。
+本项目遵循 [AgentSkills 开放规范](https://agentskills.io)，同时兼容以下平台：
+
+### Claude Code
+
+将本项目目录添加到 Claude Code 的 Skill 配置中，Claude 会自动识别 `SKILL.md` 并加载小红书能力。
+
+### OpenClaw
+
+将本项目放到 OpenClaw 的 Skills 目录中：
+
+```bash
+# 方式一：直接克隆到工作区 Skills 目录
+git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.openclaw/workspace/skills/xiaohongshu-skill
+
+# 方式二：通过 ClawHub 安装（如已发布）
+clawhub install xiaohongshu-skill
+```
+
+OpenClaw 会在下一个会话中自动加载。`SKILL.md` 中的 `{baseDir}` 模板变量会被替换为实际的 Skill 目录路径。
 
 ## 注意事项
 
