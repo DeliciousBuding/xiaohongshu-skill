@@ -179,6 +179,16 @@ class LoginAction:
                 has_session = any(c['name'] == 'web_session' for c in cookies)
                 if has_session:
                     print("检测到 web_session cookie，登录成功！", file=sys.stderr)
+                    # 等待页面完成登录流程（写入 localStorage/sessionStorage）
+                    # 持久化上下文需要这些状态才能在下次启动时保持登录
+                    print("等待页面完成登录初始化...", file=sys.stderr)
+                    time.sleep(5)
+                    # 导航到首页确保登录状态完全生效
+                    try:
+                        self.client.page.goto("https://www.xiaohongshu.com/explore", wait_until="networkidle", timeout=15000)
+                        time.sleep(3)
+                    except Exception:
+                        time.sleep(3)
                     self.client._save_cookies()
                     return True
             except Exception:

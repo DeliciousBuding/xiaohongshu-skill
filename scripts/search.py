@@ -138,29 +138,40 @@ class SearchAction:
         return None
 
     def _dismiss_login_popup(self, search_url: Optional[str] = None):
-        """关闭登录弹窗（如果存在），并处理可能的重定向"""
+        """关闭登录弹窗（如果存在），并处理可能的重定向
+
+        最多尝试 2 轮：关闭弹窗 → 检测重定向 → 重新导航 → 再关闭弹窗
+        """
         page = self.client.page
-        try:
-            close_btn = page.locator('.login-container .close-button, .login-container .close, .close-circle')
-            if close_btn.count() > 0:
-                close_btn.first.click()
-                time.sleep(1)
-            else:
-                overlay = page.locator('.login-container')
-                if overlay.count() > 0 and overlay.first.is_visible():
-                    page.keyboard.press("Escape")
+
+        for attempt in range(2):
+            try:
+                popup = page.locator('.login-container')
+                if popup.count() == 0 or not popup.first.is_visible():
+                    return  # 无弹窗
+
+                # 尝试点击关闭按钮
+                close_btn = page.locator('.login-container .close-button, .login-container .close, .close-circle')
+                if close_btn.count() > 0:
+                    close_btn.first.click()
                     time.sleep(1)
                 else:
-                    return  # 无弹窗，无需处理
-        except Exception:
-            return
+                    page.keyboard.press("Escape")
+                    time.sleep(1)
+            except Exception:
+                return
 
-        # 关闭弹窗后，小红书可能将未登录用户重定向到首页推荐流
-        # 检测是否被重定向离开搜索页，若是则重新导航回搜索页
-        if search_url and 'search_result' not in page.url:
-            print("登录弹窗关闭后被重定向，重新导航到搜索页...", file=sys.stderr)
-            self.client.navigate(search_url)
-            time.sleep(2)
+            # 关闭弹窗后，小红书可能将未登录用户重定向到首页推荐流
+            if search_url and 'search_result' not in page.url:
+                if attempt == 0:
+                    print("登录弹窗关闭后被重定向，重新导航到搜索页...", file=sys.stderr)
+                    self.client.navigate(search_url)
+                    time.sleep(3)
+                    # 继续循环，再检查一次弹窗
+                else:
+                    break  # 第二次仍被重定向，放弃
+            else:
+                break  # 仍在搜索页，成功
 
     def _extract_from_state(self, limit: int) -> List[Dict[str, Any]]:
         """从 __INITIAL_STATE__ 提取搜索结果（SSR 路径）"""
