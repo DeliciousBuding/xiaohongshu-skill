@@ -5,6 +5,7 @@
 """
 
 import json
+import sys
 import time
 import urllib.parse
 from typing import Optional, List, Dict, Any
@@ -85,55 +86,55 @@ class SearchAction:
             # 等待筛选面板出现
             page.wait_for_selector('div.filter-panel', timeout=5000)
         except Exception as e:
-            print(f"打开筛选面板失败: {e}")
+            print(f"打开筛选面板失败: {e}", file=sys.stderr)
             return
 
-        # 映射筛选选项到索引
-        filter_mapping = []
+        # 映射筛选选项到文本
+        filter_texts = []
 
         if sort_by:
-            idx = self._find_filter_index(1, sort_by)
-            if idx:
-                filter_mapping.append((1, idx))
+            text = self._find_filter_text(1, sort_by)
+            if text:
+                filter_texts.append(text)
 
         if note_type:
-            idx = self._find_filter_index(2, note_type)
-            if idx:
-                filter_mapping.append((2, idx))
+            text = self._find_filter_text(2, note_type)
+            if text:
+                filter_texts.append(text)
 
         if publish_time:
-            idx = self._find_filter_index(3, publish_time)
-            if idx:
-                filter_mapping.append((3, idx))
+            text = self._find_filter_text(3, publish_time)
+            if text:
+                filter_texts.append(text)
 
         if search_scope:
-            idx = self._find_filter_index(4, search_scope)
-            if idx:
-                filter_mapping.append((4, idx))
+            text = self._find_filter_text(4, search_scope)
+            if text:
+                filter_texts.append(text)
 
         if location:
-            idx = self._find_filter_index(5, location)
-            if idx:
-                filter_mapping.append((5, idx))
+            text = self._find_filter_text(5, location)
+            if text:
+                filter_texts.append(text)
 
-        # 应用筛选
-        for filters_idx, tags_idx in filter_mapping:
+        # 应用筛选：使用文本定位器，避免依赖 DOM 顺序
+        filter_panel = page.locator('div.filter-panel')
+        for tag_text in filter_texts:
             try:
-                selector = f'div.filter-panel div.filters:nth-child({filters_idx}) div.tags:nth-child({tags_idx})'
-                page.locator(selector).click()
+                filter_panel.get_by_text(tag_text, exact=True).click()
                 time.sleep(0.3)
             except Exception as e:
-                print(f"点击筛选选项失败: {e}")
+                print(f"点击筛选选项失败: {e}", file=sys.stderr)
 
         # 等待页面更新
         time.sleep(1)
 
-    def _find_filter_index(self, filters_group: int, text: str) -> Optional[int]:
-        """查找筛选选项索引"""
+    def _find_filter_text(self, filters_group: int, text: str) -> Optional[str]:
+        """查找筛选选项的显示文本（用于文本定位器）"""
         options = FILTER_OPTIONS_MAP.get(filters_group, [])
         for opt in options:
             if opt["text"] == text:
-                return opt["index"]
+                return opt["text"]
         return None
 
     def search(
@@ -215,14 +216,14 @@ class SearchAction:
         }""")
 
         if not result:
-            print("未获取到搜索结果")
+            print("未获取到搜索结果", file=sys.stderr)
             return []
 
         # 解析 JSON
         try:
             feeds = json.loads(result)
         except json.JSONDecodeError as e:
-            print(f"解析搜索结果失败: {e}")
+            print(f"解析搜索结果失败: {e}", file=sys.stderr)
             return []
 
         # 限制数量

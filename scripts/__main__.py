@@ -14,11 +14,14 @@ from typing import Optional
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .client import XiaohongshuClient, CaptchaError, DEFAULT_COOKIE_PATH
 from . import login
 from . import search
 from . import feed
 from . import user
+from . import comment
+from . import interact
+from . import explore
 
 
 def format_output(data) -> str:
@@ -94,7 +97,7 @@ def cmd_qrcode(args):
             }))
 
             # 等待用户扫码（最多 120 秒）
-            print("等待用户扫码…（最多 120 秒）")
+            print("等待用户扫码…（最多 120 秒）", file=sys.stderr)
             success = action.wait_for_login(timeout=120)
 
             if success:
@@ -168,6 +171,103 @@ def cmd_user(args):
     return 0 if profile else 1
 
 
+def cmd_me(args):
+    """获取自己的个人主页"""
+    profile = user.my_profile(
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(profile))
+    return 0 if profile else 1
+
+
+def cmd_comment(args):
+    """发表评论"""
+    result = comment.post_comment(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        content=args.content,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_reply(args):
+    """回复评论"""
+    result = comment.reply_to_comment(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        comment_id=args.comment_id,
+        reply_user_id=args.reply_user_id,
+        content=args.content,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_like(args):
+    """点赞"""
+    result = interact.like(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_unlike(args):
+    """取消点赞"""
+    result = interact.unlike(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_collect(args):
+    """收藏"""
+    result = interact.collect(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_uncollect(args):
+    """取消收藏"""
+    result = interact.uncollect(
+        feed_id=args.feed_id,
+        xsec_token=args.xsec_token or "",
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_explore(args):
+    """首页推荐流"""
+    result = explore.explore(
+        limit=args.limit,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0
+
+
 # ============================================================
 # 入口
 # ============================================================
@@ -228,12 +328,85 @@ def main():
     u_p.add_argument("--headless", default='true')
     u_p.set_defaults(func=cmd_user)
 
+    # me (获取自己的主页)
+    me_p = subparsers.add_parser("me", help="获取自己的个人主页")
+    me_p.add_argument("--headless", default='true')
+    me_p.set_defaults(func=cmd_me)
+
+    # comment (发表评论)
+    cmt_p = subparsers.add_parser("comment", help="发表评论")
+    cmt_p.add_argument("feed_id", help="笔记 ID")
+    cmt_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    cmt_p.add_argument("--content", required=True, help="评论内容")
+    cmt_p.add_argument("--headless", default='true')
+    cmt_p.set_defaults(func=cmd_comment)
+
+    # reply (回复评论)
+    rpl_p = subparsers.add_parser("reply", help="回复评论")
+    rpl_p.add_argument("feed_id", help="笔记 ID")
+    rpl_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    rpl_p.add_argument("--comment-id", required=True, help="目标评论 ID")
+    rpl_p.add_argument("--reply-user-id", required=True, help="被回复用户 ID")
+    rpl_p.add_argument("--content", required=True, help="回复内容")
+    rpl_p.add_argument("--headless", default='true')
+    rpl_p.set_defaults(func=cmd_reply)
+
+    # like (点赞)
+    like_p = subparsers.add_parser("like", help="点赞笔记")
+    like_p.add_argument("feed_id", help="笔记 ID")
+    like_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    like_p.add_argument("--headless", default='true')
+    like_p.set_defaults(func=cmd_like)
+
+    # unlike (取消点赞)
+    unlike_p = subparsers.add_parser("unlike", help="取消点赞")
+    unlike_p.add_argument("feed_id", help="笔记 ID")
+    unlike_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    unlike_p.add_argument("--headless", default='true')
+    unlike_p.set_defaults(func=cmd_unlike)
+
+    # collect (收藏)
+    col_p = subparsers.add_parser("collect", help="收藏笔记")
+    col_p.add_argument("feed_id", help="笔记 ID")
+    col_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    col_p.add_argument("--headless", default='true')
+    col_p.set_defaults(func=cmd_collect)
+
+    # uncollect (取消收藏)
+    ucol_p = subparsers.add_parser("uncollect", help="取消收藏")
+    ucol_p.add_argument("feed_id", help="笔记 ID")
+    ucol_p.add_argument("xsec_token", nargs="?", help="xsec_token")
+    ucol_p.add_argument("--headless", default='true')
+    ucol_p.set_defaults(func=cmd_uncollect)
+
+    # explore (首页推荐流)
+    exp_p = subparsers.add_parser("explore", help="获取首页推荐流")
+    exp_p.add_argument("--limit", "-n", type=int, default=20, help="返回数量")
+    exp_p.add_argument("--headless", default='true')
+    exp_p.set_defaults(func=cmd_explore)
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
         return 0
 
-    return args.func(args)
+    try:
+        return args.func(args)
+    except CaptchaError as e:
+        print(format_output({
+            "status": "error",
+            "error_type": "CaptchaError",
+            "message": str(e),
+            "captcha_url": e.captcha_url,
+        }))
+        return 1
+    except Exception as e:
+        print(format_output({
+            "status": "error",
+            "error_type": type(e).__name__,
+            "message": str(e),
+        }))
+        return 1
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@
 import json
 import os
 import random
+import sys
 import time
 from pathlib import Path
 from typing import Optional, Any, Dict
@@ -49,11 +50,6 @@ class CaptchaError(Exception):
 class XiaohongshuClient:
     """小红书浏览器客户端"""
 
-    # 全局请求计时器（类变量，跨实例共享）
-    _last_navigate_time: float = 0.0
-    _navigate_count: int = 0
-    _session_start: float = 0.0
-
     # 频率控制参数
     MIN_INTERVAL = 3.0       # 两次导航最小间隔（秒）
     MAX_INTERVAL = 6.0       # 两次导航最大间隔（秒）
@@ -74,6 +70,11 @@ class XiaohongshuClient:
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
+
+        # 请求计时器（实例变量，避免跨实例干扰）
+        self._last_navigate_time: float = 0.0
+        self._navigate_count: int = 0
+        self._session_start: float = 0.0
 
     def __enter__(self):
         self.start()
@@ -127,9 +128,9 @@ class XiaohongshuClient:
                 cookies = json.load(f)
             if cookies:
                 self.context.add_cookies(cookies)
-                print(f"已加载 {len(cookies)} 个 Cookie")
+                print(f"已加载 {len(cookies)} 个 Cookie", file=sys.stderr)
         except Exception as e:
-            print(f"加载 Cookie 失败: {e}")
+            print(f"加载 Cookie 失败: {e}", file=sys.stderr)
 
     def _save_cookies(self):
         """保存 Cookie 到文件"""
@@ -141,37 +142,36 @@ class XiaohongshuClient:
             os.makedirs(os.path.dirname(self.cookie_path), exist_ok=True)
             with open(self.cookie_path, 'w', encoding='utf-8') as f:
                 json.dump(cookies, f, ensure_ascii=False, indent=2)
-            print(f"已保存 {len(cookies)} 个 Cookie 到 {self.cookie_path}")
+            print(f"已保存 {len(cookies)} 个 Cookie 到 {self.cookie_path}", file=sys.stderr)
         except Exception as e:
-            print(f"保存 Cookie 失败: {e}")
+            print(f"保存 Cookie 失败: {e}", file=sys.stderr)
 
     def _throttle(self):
         """请求频率控制：模拟人类浏览节奏"""
         now = time.time()
-        cls = XiaohongshuClient
 
         # 初始化会话起点
-        if cls._session_start == 0:
-            cls._session_start = now
+        if self._session_start == 0:
+            self._session_start = now
 
         # 计算距上次导航的间隔
-        elapsed = now - cls._last_navigate_time if cls._last_navigate_time > 0 else 999
+        elapsed = now - self._last_navigate_time if self._last_navigate_time > 0 else 999
 
         # 连续请求达到阈值 → 额外冷却
-        if cls._navigate_count > 0 and cls._navigate_count % cls.BURST_THRESHOLD == 0:
-            cooldown = cls.BURST_COOLDOWN + random.uniform(0, 3)
+        if self._navigate_count > 0 and self._navigate_count % self.BURST_THRESHOLD == 0:
+            cooldown = self.BURST_COOLDOWN + random.uniform(0, 3)
             if elapsed < cooldown:
                 wait = cooldown - elapsed
-                print(f"反爬保护: 连续请求 {cls._navigate_count} 次，冷却 {wait:.1f}s...")
+                print(f"反爬保护: 连续请求 {self._navigate_count} 次，冷却 {wait:.1f}s...", file=sys.stderr)
                 time.sleep(wait)
-        elif elapsed < cls.MIN_INTERVAL:
+        elif elapsed < self.MIN_INTERVAL:
             # 普通间隔控制
-            wait = random.uniform(cls.MIN_INTERVAL, cls.MAX_INTERVAL) - elapsed
+            wait = random.uniform(self.MIN_INTERVAL, self.MAX_INTERVAL) - elapsed
             if wait > 0:
                 time.sleep(wait)
 
-        cls._last_navigate_time = time.time()
-        cls._navigate_count += 1
+        self._last_navigate_time = time.time()
+        self._navigate_count += 1
 
     def _check_captcha(self) -> bool:
         """
@@ -211,7 +211,7 @@ class XiaohongshuClient:
             message=(
                 f"触发小红书安全验证！\n"
                 f"  验证页面: {url}\n"
-                f"  本次会话已请求 {XiaohongshuClient._navigate_count} 次\n"
+                f"  本次会话已请求 {self._navigate_count} 次\n"
                 f"  建议: 1) 等待几分钟后重试  2) 用 --headless=false 手动过验证码  "
                 f"3) 重新扫码登录"
             ),
@@ -256,14 +256,14 @@ class XiaohongshuClient:
                 return
             except Exception:
                 if attempt < retries:
-                    print(f"__INITIAL_STATE__ 等待超时，刷新重试 ({attempt + 1}/{retries})...")
+                    print(f"__INITIAL_STATE__ 等待超时，刷新重试 ({attempt + 1}/{retries})...", file=sys.stderr)
                     self.page.reload(wait_until="domcontentloaded")
                     time.sleep(random.uniform(2, 4))
                     # 刷新后再检测验证码
                     if self._check_captcha():
                         self._handle_captcha()
                 else:
-                    print("警告: __INITIAL_STATE__ 加载超时，尝试继续执行")
+                    print("警告: __INITIAL_STATE__ 加载超时，尝试继续执行", file=sys.stderr)
 
     def get_initial_state(self) -> Dict[str, Any]:
         """获取 __INITIAL_STATE__ 数据"""
@@ -321,8 +321,9 @@ class XiaohongshuClient:
 
         return current
 
+    # DEPRECATED: use login.LoginAction.check_login_status() instead
     def check_login_status(self) -> bool:
-        """检查登录状态"""
+        """检查登录状态（已废弃，请使用 login.LoginAction）"""
         if not self.page:
             raise RuntimeError("浏览器未启动")
 
@@ -338,8 +339,9 @@ class XiaohongshuClient:
         except Exception:
             return False
 
+    # DEPRECATED: use login.LoginAction.get_wechat_qrcode() instead
     def get_qrcode(self) -> Optional[str]:
-        """获取登录二维码"""
+        """获取登录二维码（已废弃，请使用 login.LoginAction）"""
         if not self.page:
             raise RuntimeError("浏览器未启动")
 
@@ -359,6 +361,7 @@ class XiaohongshuClient:
         except Exception:
             return None
 
+    # DEPRECATED: use login.LoginAction.wait_for_login() instead
     def wait_for_login(self, timeout: int = 120) -> bool:
         """
         等待用户扫码登录

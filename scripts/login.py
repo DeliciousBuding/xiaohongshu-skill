@@ -6,6 +6,7 @@
 """
 
 import json
+import sys
 import time
 import base64
 import os
@@ -135,11 +136,11 @@ class LoginAction:
             with open(QRCODE_PATH, 'wb') as f:
                 f.write(img_data)
 
-            print(f"二维码已保存到: {QRCODE_PATH}")
+            print(f"二维码已保存到: {QRCODE_PATH}", file=sys.stderr)
             return QRCODE_PATH, False
 
         # 后备：整页截屏
-        print("未找到有效的二维码图片，截屏保存...")
+        print("未找到有效的二维码图片，截屏保存...", file=sys.stderr)
         os.makedirs(QRCODE_DIR, exist_ok=True)
         page.screenshot(path=QRCODE_PATH)
         return QRCODE_PATH, False
@@ -162,22 +163,22 @@ class LoginAction:
         start = time.time()
 
         # ---- 阶段 1: 强制等待 min_wait 秒 ----
-        print(f"请在手机上扫码并确认登录（至少等待 {min_wait} 秒）...")
+        print(f"请在手机上扫码并确认登录（至少等待 {min_wait} 秒）...", file=sys.stderr)
         while time.time() - start < min_wait:
             elapsed = int(time.time() - start)
             remaining = min_wait - elapsed
             if remaining > 0 and remaining % 10 == 0:
-                print(f"  等待中... 还剩 {remaining} 秒")
+                print(f"  等待中... 还剩 {remaining} 秒", file=sys.stderr)
             time.sleep(2)
 
         # ---- 阶段 2: 开始轮询检测 web_session cookie ----
-        print("开始检测登录状态...")
+        print("开始检测登录状态...", file=sys.stderr)
         while time.time() - start < timeout:
             try:
                 cookies = self.client.context.cookies()
                 has_session = any(c['name'] == 'web_session' for c in cookies)
                 if has_session:
-                    print("检测到 web_session cookie，登录成功！")
+                    print("检测到 web_session cookie，登录成功！", file=sys.stderr)
                     self.client._save_cookies()
                     return True
             except Exception:
@@ -186,10 +187,10 @@ class LoginAction:
             elapsed = int(time.time() - start)
             remaining = timeout - elapsed
             if remaining > 0 and remaining % 15 == 0:
-                print(f"  仍在等待登录... 剩余 {remaining} 秒")
+                print(f"  仍在等待登录... 剩余 {remaining} 秒", file=sys.stderr)
             time.sleep(3)
 
-        print("登录超时")
+        print("登录超时", file=sys.stderr)
         return False
 
 

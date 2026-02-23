@@ -5,6 +5,7 @@
 """
 
 import json
+import sys
 import time
 import random
 from typing import Optional, Dict, Any, Tuple
@@ -139,7 +140,7 @@ class FeedDetailAction:
 
         # 构建 URL 并导航
         url = self._make_feed_detail_url(feed_id, xsec_token, xsec_source)
-        print(f"打开笔记详情页: {url}")
+        print(f"打开笔记详情页: {url}", file=sys.stderr)
         client.navigate(url)
 
         # 等待页面加载
@@ -153,18 +154,18 @@ class FeedDetailAction:
             if detail:
                 break
             if attempt < 2:
-                print(f"noteDetailMap 未就绪，等待重试 ({attempt + 1}/3)...")
+                print(f"noteDetailMap 未就绪，等待重试 ({attempt + 1}/3)...", file=sys.stderr)
                 time.sleep(2)
 
         # 加载评论
         if detail and load_comments:
-            print("加载评论中...")
+            print("加载评论中...", file=sys.stderr)
             self._load_comments(max_comments)
             # 重新提取以包含评论数据
             detail = self._extract_feed_detail(feed_id) or detail
 
         if not detail:
-            print("未获取到笔记详情")
+            print("未获取到笔记详情", file=sys.stderr)
             return None
 
         return detail
