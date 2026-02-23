@@ -19,8 +19,11 @@ except ImportError:
     raise
 
 
-# Cookie 文件路径
+# Cookie 文件路径（备份用）
 DEFAULT_COOKIE_PATH = os.path.expanduser("~/.xiaohongshu/cookies.json")
+
+# 持久化浏览器数据目录（保存 cookies + localStorage + sessionStorage 等全部会话状态）
+DEFAULT_USER_DATA_DIR = os.path.expanduser("~/.xiaohongshu/browser-data")
 
 # 验证码/安全拦截页面的 URL 特征
 CAPTCHA_URL_PATTERNS = [
@@ -60,10 +63,12 @@ class XiaohongshuClient:
         self,
         headless: bool = True,
         cookie_path: str = DEFAULT_COOKIE_PATH,
+        user_data_dir: str = DEFAULT_USER_DATA_DIR,
         timeout: int = 60,
     ):
         self.headless = headless
         self.cookie_path = cookie_path
+        self.user_data_dir = user_data_dir
         self.timeout = timeout * 1000  # 转换为毫秒
 
         self.playwright: Optional[Playwright] = None
@@ -84,37 +89,42 @@ class XiaohongshuClient:
         self.close()
 
     def start(self):
-        """启动浏览器"""
+        """启动浏览器（持久化上下文，自动保存全部会话状态）"""
         self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(
-            headless=self.headless,
-            args=['--disable-blink-features=AutomationControlled'],
-        )
+        os.makedirs(self.user_data_dir, exist_ok=True)
 
-        # 创建上下文
-        self.context = self.browser.new_context(
+        # 使用持久化上下文：自动保存 cookies + localStorage + sessionStorage + indexedDB
+        self.context = self.playwright.chromium.launch_persistent_context(
+            user_data_dir=self.user_data_dir,
+            headless=self.headless,
             viewport={'width': 1920, 'height': 1080},
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            args=['--disable-blink-features=AutomationControlled'],
         )
+        self.browser = None  # persistent context 无需单独的 browser 对象
 
-        # 加载 Cookie
-        self._load_cookies()
+        # 如果持久化目录是新的但有旧 cookie 备份文件，迁移恢复
+        if not self.context.cookies() and os.path.exists(self.cookie_path):
+            self._load_cookies()
+            print("已从备份文件迁移 Cookie 到持久化上下文", file=sys.stderr)
 
-        # 创建页面
-        self.page = self.context.new_page()
+        # 复用持久化上下文的已有页面，或创建新页面
+        if self.context.pages:
+            self.page = self.context.pages[0]
+        else:
+            self.page = self.context.new_page()
         self.page.set_default_timeout(self.timeout)
 
     def close(self):
         """关闭浏览器"""
-        # 保存 Cookie
+        # 备份 Cookie 到文件（持久化上下文已自动保存到磁盘）
         self._save_cookies()
 
         if self.page:
             self.page.close()
         if self.context:
             self.context.close()
-        if self.browser:
-            self.browser.close()
+        # persistent context 无需单独关闭 browser
         if self.playwright:
             self.playwright.stop()
 
@@ -397,11 +407,13 @@ class XiaohongshuClient:
 def create_client(
     headless: bool = True,
     cookie_path: str = DEFAULT_COOKIE_PATH,
+    user_data_dir: str = DEFAULT_USER_DATA_DIR,
     timeout: int = 60,
 ) -> XiaohongshuClient:
     """创建小红书客户端的便捷函数"""
     return XiaohongshuClient(
         headless=headless,
         cookie_path=cookie_path,
+        user_data_dir=user_data_dir,
         timeout=timeout,
     )
