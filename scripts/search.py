@@ -137,6 +137,143 @@ class SearchAction:
                 return opt["text"]
         return None
 
+    def _dismiss_login_popup(self):
+        """关闭登录弹窗（如果存在）"""
+        page = self.client.page
+        try:
+            close_btn = page.locator('.login-container .close-button, .login-container .close, .close-circle')
+            if close_btn.count() > 0:
+                close_btn.first.click()
+                time.sleep(1)
+                return
+            # 尝试按 Escape
+            overlay = page.locator('.login-container')
+            if overlay.count() > 0 and overlay.first.is_visible():
+                page.keyboard.press("Escape")
+                time.sleep(1)
+        except Exception:
+            pass
+
+    def _extract_from_state(self, limit: int) -> List[Dict[str, Any]]:
+        """从 __INITIAL_STATE__ 提取搜索结果（SSR 路径）"""
+        page = self.client.page
+        result = page.evaluate("""() => {
+            const feeds = window.__INITIAL_STATE__?.search?.feeds;
+            const data = feeds?.value || feeds?._value;
+            if (!data || !Array.isArray(data) || data.length === 0) return '';
+
+            return JSON.stringify(data.slice(0, 50).map(item => {
+                const nc = item.noteCard || {};
+                const user = nc.user || {};
+                const info = nc.interactInfo || {};
+                const cover = nc.cover || {};
+                return {
+                    id: item.id || '',
+                    xsec_token: item.xsecToken || '',
+                    title: nc.displayTitle || '',
+                    type: nc.type || '',
+                    user: user.nickname || user.nickName || '',
+                    user_id: user.userId || '',
+                    user_avatar: user.avatar || '',
+                    liked_count: info.likedCount || '0',
+                    collected_count: info.collectedCount || '0',
+                    comment_count: info.commentCount || '0',
+                    shared_count: info.sharedCount || '0',
+                    cover_url: cover.urlDefault || cover.urlPre || '',
+                };
+            }));
+        }""")
+        if not result:
+            return []
+        try:
+            feeds = json.loads(result)
+            return feeds[:limit] if limit > 0 else feeds
+        except json.JSONDecodeError:
+            return []
+
+    def _extract_from_dom(self, limit: int) -> List[Dict[str, Any]]:
+        """从 DOM 提取搜索结果（客户端渲染路径）"""
+        page = self.client.page
+        result = page.evaluate("""(limit) => {
+            const items = document.querySelectorAll('section.note-item');
+            if (!items || items.length === 0) return '';
+
+            const results = [];
+            for (let i = 0; i < Math.min(items.length, limit); i++) {
+                const item = items[i];
+                const entry = {};
+
+                // 提取 ID 和 xsec_token（从带 xsec_token 的链接）
+                const coverLink = item.querySelector('a.cover[href*="/explore/"]');
+                if (coverLink) {
+                    const href = coverLink.getAttribute('href') || '';
+                    const idMatch = href.match(/\\/explore\\/([a-f0-9]+)/);
+                    entry.id = idMatch ? idMatch[1] : '';
+                    const tokenMatch = href.match(/xsec_token=([^&]+)/);
+                    entry.xsec_token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : '';
+                } else {
+                    const anyLink = item.querySelector('a[href*="/explore/"]');
+                    if (anyLink) {
+                        const href = anyLink.getAttribute('href') || '';
+                        const idMatch = href.match(/\\/explore\\/([a-f0-9]+)/);
+                        entry.id = idMatch ? idMatch[1] : '';
+                        const tokenMatch = href.match(/xsec_token=([^&]+)/);
+                        entry.xsec_token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : '';
+                    } else {
+                        entry.id = '';
+                        entry.xsec_token = '';
+                    }
+                }
+
+                // 标题
+                const titleEl = item.querySelector('.title span, .title, a.title');
+                entry.title = titleEl ? titleEl.textContent.trim() : '';
+
+                // 封面图
+                const coverImg = item.querySelector('img');
+                entry.cover_url = coverImg ? (coverImg.getAttribute('src') || '') : '';
+
+                // 判断类型（视频/图文）
+                const videoIcon = item.querySelector('.play-icon, [class*="video"], svg.play');
+                entry.type = videoIcon ? 'video' : 'normal';
+
+                // 作者信息
+                const authorEl = item.querySelector('.author-wrapper .name, .author .name, [class*="author"] .name, .nickname');
+                entry.user = authorEl ? authorEl.textContent.trim() : '';
+
+                const authorLink = item.querySelector('a[href*="/user/profile/"]');
+                if (authorLink) {
+                    const href = authorLink.getAttribute('href') || '';
+                    const uidMatch = href.match(/\\/user\\/profile\\/([a-f0-9]+)/);
+                    entry.user_id = uidMatch ? uidMatch[1] : '';
+                } else {
+                    entry.user_id = '';
+                }
+
+                const avatarImg = item.querySelector('.author-wrapper img, .author img');
+                entry.user_avatar = avatarImg ? (avatarImg.getAttribute('src') || '') : '';
+
+                // 互动数据
+                const likeEl = item.querySelector('.like-wrapper .count, [class*="like"] .count, .like-count');
+                entry.liked_count = likeEl ? likeEl.textContent.trim() : '0';
+
+                // 搜索结果页一般只显示点赞数
+                entry.collected_count = '0';
+                entry.comment_count = '0';
+                entry.shared_count = '0';
+
+                results.push(entry);
+            }
+            return JSON.stringify(results);
+        }""", limit if limit > 0 else 50)
+
+        if not result:
+            return []
+        try:
+            return json.loads(result)
+        except json.JSONDecodeError:
+            return []
+
     def search(
         self,
         keyword: str,
@@ -169,7 +306,10 @@ class SearchAction:
         search_url = self._make_search_url(keyword)
         client.navigate(search_url)
 
-        # 等待页面加载 - 增加等待时间确保搜索结果加载完成
+        # 关闭登录弹窗（如果存在）
+        self._dismiss_login_popup()
+
+        # 等待页面加载
         client.wait_for_initial_state()
         time.sleep(3)
 
@@ -187,49 +327,22 @@ class SearchAction:
             location=location,
         )
 
-        # 提取数据 - 使用实际验证过的字段路径
-        result = page.evaluate("""() => {
-            const feeds = window.__INITIAL_STATE__?.search?.feeds;
-            const data = feeds?.value || feeds?._value;
-            if (!data || !Array.isArray(data) || data.length === 0) return '';
-
-            return JSON.stringify(data.slice(0, 50).map(item => {
-                const nc = item.noteCard || {};
-                const user = nc.user || {};
-                const info = nc.interactInfo || {};
-                const cover = nc.cover || {};
-                return {
-                    id: item.id || '',
-                    xsec_token: item.xsecToken || '',
-                    title: nc.displayTitle || '',
-                    type: nc.type || '',
-                    user: user.nickname || user.nickName || '',
-                    user_id: user.userId || '',
-                    user_avatar: user.avatar || '',
-                    liked_count: info.likedCount || '0',
-                    collected_count: info.collectedCount || '0',
-                    comment_count: info.commentCount || '0',
-                    shared_count: info.sharedCount || '0',
-                    cover_url: cover.urlDefault || cover.urlPre || '',
-                };
-            }));
-        }""")
-
-        if not result:
-            print("未获取到搜索结果", file=sys.stderr)
-            return []
-
-        # 解析 JSON
+        # 等待搜索结果 DOM 渲染
         try:
-            feeds = json.loads(result)
-        except json.JSONDecodeError as e:
-            print(f"解析搜索结果失败: {e}", file=sys.stderr)
-            return []
+            page.wait_for_selector('section.note-item', timeout=10000)
+        except Exception:
+            print("等待搜索结果 DOM 超时", file=sys.stderr)
 
-        # 限制数量
-        if limit > 0:
-            feeds = feeds[:limit]
+        # 优先从 __INITIAL_STATE__ 提取（数据更完整）
+        feeds = self._extract_from_state(limit)
+        if feeds:
+            return feeds
 
+        # 回退到 DOM 提取（客户端渲染场景）
+        print("__INITIAL_STATE__ 无数据，从 DOM 提取搜索结果", file=sys.stderr)
+        feeds = self._extract_from_dom(limit)
+        if not feeds:
+            print("未获取到搜索结果", file=sys.stderr)
         return feeds
 
 
