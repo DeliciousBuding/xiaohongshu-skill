@@ -137,22 +137,30 @@ class SearchAction:
                 return opt["text"]
         return None
 
-    def _dismiss_login_popup(self):
-        """关闭登录弹窗（如果存在）"""
+    def _dismiss_login_popup(self, search_url: Optional[str] = None):
+        """关闭登录弹窗（如果存在），并处理可能的重定向"""
         page = self.client.page
         try:
             close_btn = page.locator('.login-container .close-button, .login-container .close, .close-circle')
             if close_btn.count() > 0:
                 close_btn.first.click()
                 time.sleep(1)
-                return
-            # 尝试按 Escape
-            overlay = page.locator('.login-container')
-            if overlay.count() > 0 and overlay.first.is_visible():
-                page.keyboard.press("Escape")
-                time.sleep(1)
+            else:
+                overlay = page.locator('.login-container')
+                if overlay.count() > 0 and overlay.first.is_visible():
+                    page.keyboard.press("Escape")
+                    time.sleep(1)
+                else:
+                    return  # 无弹窗，无需处理
         except Exception:
-            pass
+            return
+
+        # 关闭弹窗后，小红书可能将未登录用户重定向到首页推荐流
+        # 检测是否被重定向离开搜索页，若是则重新导航回搜索页
+        if search_url and 'search_result' not in page.url:
+            print("登录弹窗关闭后被重定向，重新导航到搜索页...", file=sys.stderr)
+            self.client.navigate(search_url)
+            time.sleep(2)
 
     def _extract_from_state(self, limit: int) -> List[Dict[str, Any]]:
         """从 __INITIAL_STATE__ 提取搜索结果（SSR 路径）"""
@@ -306,8 +314,8 @@ class SearchAction:
         search_url = self._make_search_url(keyword)
         client.navigate(search_url)
 
-        # 关闭登录弹窗（如果存在）
-        self._dismiss_login_popup()
+        # 关闭登录弹窗（如果存在），传入搜索URL以便重定向后能回来
+        self._dismiss_login_popup(search_url=search_url)
 
         # 等待页面加载
         client.wait_for_initial_state()
