@@ -137,41 +137,36 @@ class SearchAction:
                 return opt["text"]
         return None
 
-    def _dismiss_login_popup(self, search_url: Optional[str] = None):
-        """关闭登录弹窗（如果存在），并处理可能的重定向
+    def _dismiss_login_popup(self):
+        """关闭登录弹窗（如果存在）
 
-        最多尝试 2 轮：关闭弹窗 → 检测重定向 → 重新导航 → 再关闭弹窗
+        使用 JS 直接移除弹窗 DOM + 遮罩层，不触发点击事件。
+        点击关闭按钮会触发小红书 JS 将未登录用户重定向到推荐页，
+        而 DOM 移除方式保持 URL 不变，搜索结果可以在后台继续加载。
         """
         page = self.client.page
+        try:
+            popup = page.locator('.login-container')
+            if popup.count() == 0 or not popup.first.is_visible():
+                return  # 无弹窗
+        except Exception:
+            return
 
-        for attempt in range(2):
-            try:
-                popup = page.locator('.login-container')
-                if popup.count() == 0 or not popup.first.is_visible():
-                    return  # 无弹窗
-
-                # 尝试点击关闭按钮
-                close_btn = page.locator('.login-container .close-button, .login-container .close, .close-circle')
-                if close_btn.count() > 0:
-                    close_btn.first.click()
-                    time.sleep(1)
-                else:
-                    page.keyboard.press("Escape")
-                    time.sleep(1)
-            except Exception:
-                return
-
-            # 关闭弹窗后，小红书可能将未登录用户重定向到首页推荐流
-            if search_url and 'search_result' not in page.url:
-                if attempt == 0:
-                    print("登录弹窗关闭后被重定向，重新导航到搜索页...", file=sys.stderr)
-                    self.client.navigate(search_url)
-                    time.sleep(3)
-                    # 继续循环，再检查一次弹窗
-                else:
-                    break  # 第二次仍被重定向，放弃
-            else:
-                break  # 仍在搜索页，成功
+        print("检测到登录弹窗，通过 JS 移除...", file=sys.stderr)
+        page.evaluate("""() => {
+            // 移除登录弹窗容器
+            document.querySelectorAll('.login-container').forEach(el => el.remove());
+            // 移除可能的遮罩层
+            document.querySelectorAll('.mask, .overlay, [class*="mask"], [class*="overlay"]').forEach(el => {
+                if (el.style && (el.style.position === 'fixed' || el.style.position === 'absolute')) {
+                    el.remove();
+                }
+            });
+            // 恢复页面滚动（弹窗可能锁定了 body 滚动）
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        }""")
+        time.sleep(1)
 
     def _extract_from_state(self, limit: int) -> List[Dict[str, Any]]:
         """从 __INITIAL_STATE__ 提取搜索结果（SSR 路径）"""
@@ -325,8 +320,8 @@ class SearchAction:
         search_url = self._make_search_url(keyword)
         client.navigate(search_url)
 
-        # 关闭登录弹窗（如果存在），传入搜索URL以便重定向后能回来
-        self._dismiss_login_popup(search_url=search_url)
+        # 关闭登录弹窗（如果存在）— 使用 JS 移除 DOM，不触发重定向
+        self._dismiss_login_popup()
 
         # 等待页面加载
         client.wait_for_initial_state()
