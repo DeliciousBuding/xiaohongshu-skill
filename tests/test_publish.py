@@ -109,7 +109,10 @@ class TestFillContent:
 
         self.action._fill_content("测试正文内容")
         mock_ql.first.click.assert_called_once()
-        self.client.page.keyboard.type.assert_called_once_with("测试正文内容", delay=30)
+        # delay 已改为 random.randint(20, 60)，只验证内容和 delay 范围
+        call_args = self.client.page.keyboard.type.call_args
+        assert call_args[0][0] == "测试正文内容"
+        assert 20 <= call_args[1]["delay"] <= 60
 
 
 class TestInputTags:

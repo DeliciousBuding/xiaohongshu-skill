@@ -13,8 +13,11 @@ from . import comment
 from . import interact
 from . import explore
 from . import publish
+from . import templates
+from . import strategy
+from . import sop
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = [
     "XiaohongshuClient",
     "create_client",
@@ -27,4 +30,7 @@ __all__ = [
     "interact",
     "explore",
     "publish",
+    "templates",
+    "strategy",
+    "sop",
 ]

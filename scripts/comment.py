@@ -110,47 +110,60 @@ class CommentAction:
             pass
         return True  # 获取失败时不阻断流程
 
-    def _type_and_submit(self, content: str) -> bool:
-        """在评论输入框中输入文字并提交（整合 ops 人性化延迟）"""
-        page = self.client.page
+    def _type_and_submit(self, content: str, max_retries: int = 1) -> bool:
+        """在评论输入框中输入文字并提交（整合 ops 人性化延迟 + 失败重试）"""
+        for attempt in range(max_retries + 1):
+            if attempt > 0:
+                print(f"重试 _type_and_submit（第 {attempt + 1}/{max_retries + 1} 次）...", file=sys.stderr)
+                time.sleep(random.uniform(2, 4))
 
-        # 点击评论输入框激活（span 占位符）
-        try:
-            input_trigger = page.locator('div.input-box div.content-edit span')
-            input_trigger.first.click()
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"点击评论输入框失败: {e}", file=sys.stderr)
-            return False
+            page = self.client.page
 
-        # 在 contenteditable 的 p 元素中输入文字（人性化随机延迟）
-        try:
-            input_el = page.locator('div.input-box div.content-edit p.content-input')
-            input_el.first.click()
-            time.sleep(0.3)
-            typing_delay = random.randint(TYPING_DELAY_MIN, TYPING_DELAY_MAX)
-            page.keyboard.type(content, delay=typing_delay)
-            # 提交前随机等待，模拟人类检查
-            pre_wait = random.uniform(PRE_SUBMIT_DELAY_MIN, PRE_SUBMIT_DELAY_MAX)
-            time.sleep(pre_wait)
-        except Exception as e:
-            print(f"输入评论内容失败: {e}", file=sys.stderr)
-            return False
+            # 点击评论输入框激活（span 占位符）
+            try:
+                input_trigger = page.locator('div.input-box div.content-edit span')
+                input_trigger.first.click()
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"点击评论输入框失败: {e}", file=sys.stderr)
+                if attempt < max_retries:
+                    continue
+                return False
 
-        # 点击发送按钮
-        try:
-            submit_btn = page.locator('div.bottom button.submit')
-            submit_btn.first.click()
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"点击发送按钮失败: {e}", file=sys.stderr)
-            return False
+            # 在 contenteditable 的 p 元素中输入文字（人性化随机延迟）
+            try:
+                input_el = page.locator('div.input-box div.content-edit p.content-input')
+                input_el.first.click()
+                time.sleep(0.3)
+                typing_delay = random.randint(TYPING_DELAY_MIN, TYPING_DELAY_MAX)
+                page.keyboard.type(content, delay=typing_delay)
+                # 提交前随机等待，模拟人类检查
+                pre_wait = random.uniform(PRE_SUBMIT_DELAY_MIN, PRE_SUBMIT_DELAY_MAX)
+                time.sleep(pre_wait)
+            except Exception as e:
+                print(f"输入评论内容失败: {e}", file=sys.stderr)
+                if attempt < max_retries:
+                    continue
+                return False
 
-        # 检查是否触发频率限制
-        if self._check_rate_limit():
-            return False
+            # 点击发送按钮
+            try:
+                submit_btn = page.locator('div.bottom button.submit')
+                submit_btn.first.click()
+                time.sleep(1.5)
+            except Exception as e:
+                print(f"点击发送按钮失败: {e}", file=sys.stderr)
+                if attempt < max_retries:
+                    continue
+                return False
 
-        return True
+            # 检查是否触发频率限制
+            if self._check_rate_limit():
+                return False
+
+            return True
+
+        return False
 
     def post_comment(
         self,
@@ -308,6 +321,86 @@ class CommentAction:
                 "message": "回复发送失败",
             }
 
+    def reply_via_notification(
+        self,
+        content: str,
+        notification_index: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        通过通知页回复评论（ops 推荐路径，比直跳详情页更安全）
+
+        Flow:
+        1. 导航到 /notification 通知页
+        2. 定位目标通知项
+        3. 点击回复
+        4. 输入内容并提交
+
+        Args:
+            content: 回复内容
+            notification_index: 通知项索引（0 = 最新）
+
+        Returns:
+            操作结果
+        """
+        # 评论内容校验
+        error = self.validate_comment(content)
+        if error:
+            return {"status": "error", "message": error}
+
+        page = self.client.page
+        print("导航到通知页...", file=sys.stderr)
+        self.client.navigate("https://www.xiaohongshu.com/notification")
+        time.sleep(3)
+
+        # 查找通知项
+        notifications = page.locator('.notification-item, .notify-item, .message-item')
+        total = notifications.count()
+        if total <= notification_index:
+            return {
+                "status": "error",
+                "message": f"通知项索引超出范围（索引 {notification_index}，共 {total} 条）",
+            }
+
+        target = notifications.nth(notification_index)
+        target.hover()
+        time.sleep(0.5)
+
+        # 点击回复按钮
+        reply_btn = target.locator('span:has-text("回复"), button:has-text("回复")')
+        if reply_btn.count() > 0:
+            reply_btn.first.click()
+            time.sleep(1)
+            # 验证输入框 placeholder
+            self._verify_input_placeholder("回复")
+        else:
+            # 回退：直接点击通知项
+            target.click()
+            time.sleep(2)
+
+        # 输入并提交
+        success = self._type_and_submit(content)
+
+        if success:
+            print("通知页回复成功", file=sys.stderr)
+            cooldown = random.uniform(POST_SUBMIT_COOLDOWN_MIN, POST_SUBMIT_COOLDOWN_MAX)
+            print(f"提交后冷却 {cooldown:.1f}s...", file=sys.stderr)
+            time.sleep(cooldown)
+            return {
+                "status": "success",
+                "action": "reply_notification",
+                "notification_index": notification_index,
+                "content": content,
+                "message": "通知页回复成功",
+            }
+        else:
+            return {
+                "status": "error",
+                "action": "reply_notification",
+                "notification_index": notification_index,
+                "content": content,
+                "message": "通知页回复失败",
+            }
+
 
 def post_comment(
     feed_id: str,
@@ -377,5 +470,36 @@ def reply_to_comment(
         return action.reply_to_comment(
             feed_id, xsec_token, comment_id, reply_user_id, content
         )
+    finally:
+        client.close()
+
+
+def reply_via_notification(
+    content: str,
+    notification_index: int = 0,
+    headless: bool = True,
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+) -> Dict[str, Any]:
+    """
+    通过通知页回复评论（ops 推荐的安全路径）
+
+    Args:
+        content: 回复内容
+        notification_index: 通知项索引（0 = 最新）
+        headless: 是否无头模式
+        cookie_path: Cookie 路径
+
+    Returns:
+        操作结果
+    """
+    client = XiaohongshuClient(
+        headless=headless,
+        cookie_path=cookie_path,
+    )
+
+    try:
+        client.start()
+        action = CommentAction(client)
+        return action.reply_via_notification(content, notification_index)
     finally:
         client.close()

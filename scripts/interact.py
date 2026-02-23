@@ -2,14 +2,25 @@
 小红书互动模块（点赞 / 取消点赞 / 收藏 / 取消收藏）
 
 基于 xiaohongshu-mcp/like_favorite.go 翻译
+整合 xiaohongshu-ops 的安全互动理念（人性化延迟、频率检测、批次冷却）
 """
 
 import json
 import sys
 import time
+import random
 from typing import Optional, Dict, Any, Tuple
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+
+# 互动安全常量（来自 xiaohongshu-ops）
+PRE_CLICK_DELAY_MIN = 1.0     # 点击前延迟下限（秒）
+PRE_CLICK_DELAY_MAX = 2.5     # 点击前延迟上限（秒）
+POST_CLICK_COOLDOWN_MIN = 5   # 点击后冷却下限（秒）
+POST_CLICK_COOLDOWN_MAX = 12  # 点击后冷却上限（秒）
+BATCH_INTERACT_THRESHOLD = 3  # 连续交互触发批次冷却的阈值
+BATCH_COOLDOWN_MIN = 15       # 批次冷却下限（秒）
+BATCH_COOLDOWN_MAX = 30       # 批次冷却上限（秒）
 
 
 class InteractAction:
@@ -23,6 +34,7 @@ class InteractAction:
 
     def __init__(self, client: XiaohongshuClient):
         self.client = client
+        self._interact_count = 0  # 交互计数（用于批次冷却）
 
     def _make_feed_url(self, feed_id: str, xsec_token: str, xsec_source: str = "pc_feed") -> str:
         """构建笔记详情 URL"""
@@ -87,6 +99,68 @@ class InteractAction:
             print(f"点击{label}按钮失败: {e}", file=sys.stderr)
             return False
 
+    def _check_rate_limit(self) -> bool:
+        """
+        检测是否触发了互动频率限制（来自 ops 安全理念）
+
+        Returns:
+            True 表示被限流
+        """
+        page = self.client.page
+        try:
+            rate_limit_selectors = [
+                'div.d-toast:has-text("频繁")',
+                'div.d-toast:has-text("操作太快")',
+                'div.d-toast:has-text("稍后再试")',
+                'div.d-toast:has-text("限制")',
+            ]
+            for sel in rate_limit_selectors:
+                toast = page.locator(sel)
+                if toast.count() > 0 and toast.first.is_visible():
+                    toast_text = toast.first.text_content()
+                    print(f"检测到频率限制: {toast_text}", file=sys.stderr)
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def _humanized_interact(self, selector: str, label: str) -> bool:
+        """
+        人性化互动：点击前随机延迟 → 点击 → 频率检测 → 批次冷却
+
+        Args:
+            selector: 按钮 CSS 选择器
+            label: 操作标签（用于日志）
+
+        Returns:
+            True 表示操作成功
+        """
+        # 点击前随机延迟
+        pre_delay = random.uniform(PRE_CLICK_DELAY_MIN, PRE_CLICK_DELAY_MAX)
+        time.sleep(pre_delay)
+
+        success = self._click_button(selector, label)
+
+        if success:
+            # 检查频率限制
+            if self._check_rate_limit():
+                print(f"{label}后检测到频率限制", file=sys.stderr)
+                return False
+
+            self._interact_count += 1
+
+            # 批次冷却
+            if self._interact_count % BATCH_INTERACT_THRESHOLD == 0:
+                cooldown = random.uniform(BATCH_COOLDOWN_MIN, BATCH_COOLDOWN_MAX)
+                print(f"批次冷却（第 {self._interact_count} 次交互）: {cooldown:.1f}s", file=sys.stderr)
+                time.sleep(cooldown)
+            else:
+                # 普通冷却
+                cooldown = random.uniform(POST_CLICK_COOLDOWN_MIN, POST_CLICK_COOLDOWN_MAX)
+                time.sleep(cooldown)
+
+        return success
+
     def like(self, feed_id: str, xsec_token: str) -> Dict[str, Any]:
         """
         点赞笔记
@@ -106,7 +180,7 @@ class InteractAction:
                 "message": "已经点赞过了",
             }
 
-        success = self._click_button(self.LIKE_SELECTOR, "点赞")
+        success = self._humanized_interact(self.LIKE_SELECTOR, "点赞")
         return {
             "status": "success" if success else "error",
             "action": "like",
@@ -133,7 +207,7 @@ class InteractAction:
                 "message": "尚未点赞，无需取消",
             }
 
-        success = self._click_button(self.LIKE_SELECTOR, "取消点赞")
+        success = self._humanized_interact(self.LIKE_SELECTOR, "取消点赞")
         return {
             "status": "success" if success else "error",
             "action": "unlike",
@@ -160,7 +234,7 @@ class InteractAction:
                 "message": "已经收藏过了",
             }
 
-        success = self._click_button(self.COLLECT_SELECTOR, "收藏")
+        success = self._humanized_interact(self.COLLECT_SELECTOR, "收藏")
         return {
             "status": "success" if success else "error",
             "action": "collect",
@@ -187,7 +261,7 @@ class InteractAction:
                 "message": "尚未收藏，无需取消",
             }
 
-        success = self._click_button(self.COLLECT_SELECTOR, "取消收藏")
+        success = self._humanized_interact(self.COLLECT_SELECTOR, "取消收藏")
         return {
             "status": "success" if success else "error",
             "action": "uncollect",

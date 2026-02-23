@@ -23,6 +23,9 @@ from . import comment
 from . import interact
 from . import explore
 from . import publish
+from . import templates
+from . import strategy
+from . import sop
 
 
 def format_output(data) -> str:
@@ -335,6 +338,111 @@ def cmd_publish_md(args):
     return 0 if result.get("status") in ("success", "ready") else 1
 
 
+def cmd_publish_longform(args):
+    """发布长文笔记"""
+    result = publish.publish_longform(
+        title=args.title,
+        content=args.content,
+        auto_publish=args.auto_publish,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") in ("success", "ready") else 1
+
+
+def cmd_reply_notification(args):
+    """通过通知页回复评论"""
+    result = comment.reply_via_notification(
+        content=args.content,
+        notification_index=args.index,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "success" else 1
+
+
+def cmd_template(args):
+    """生成写作模板"""
+    result = templates.generate_template(
+        topic=args.topic,
+        note_type=args.type,
+    )
+    print(format_output(result))
+    return 0
+
+
+def cmd_strategy_init(args):
+    """初始化运营策略"""
+    directions = [d.strip() for d in args.direction.split(",")] if args.direction else None
+    result = strategy.init_strategy(
+        persona=args.persona,
+        target_audience=args.audience or "",
+        content_direction=directions,
+    )
+    print(format_output(result))
+    return 0
+
+
+def cmd_strategy_show(args):
+    """显示运营策略"""
+    result = strategy.show_strategy()
+    print(format_output(result))
+    return 0
+
+
+def cmd_strategy_add_post(args):
+    """添加内容计划"""
+    result = strategy.add_scheduled_post(
+        date=args.date,
+        topic=args.topic,
+        note_type=args.type,
+        notes=args.notes or "",
+    )
+    print(format_output(result))
+    return 0
+
+
+def cmd_strategy_check_limit(args):
+    """检查每日配额"""
+    result = strategy.check_daily_limit(args.limit_type)
+    print(format_output(result))
+    return 0
+
+
+def cmd_sop(args):
+    """执行 SOP"""
+    if args.sop_type == "publish":
+        result = sop.run_publish_sop(
+            topic=args.topic or "未指定主题",
+            note_type=args.note_type or "图文",
+            auto_publish=args.auto_publish,
+        )
+    elif args.sop_type == "comment":
+        # comment SOP 需要 JSON 格式的回复列表
+        import json as _json
+        try:
+            replies = _json.loads(args.replies) if args.replies else []
+        except _json.JSONDecodeError:
+            print(format_output({"status": "error", "message": "replies 参数格式错误，需要 JSON 数组"}))
+            return 1
+        result = sop.run_comment_sop(replies=replies)
+    elif args.sop_type == "explore":
+        result = sop.run_explore_sop(
+            feed_count=args.feed_count,
+            like_probability=args.like_prob,
+            collect_probability=args.collect_prob,
+            comment_probability=args.comment_prob,
+        )
+    else:
+        print(format_output({"status": "error", "message": f"未知 SOP 类型: {args.sop_type}"}))
+        return 1
+
+    print(format_output(result))
+    return 0 if result.get("status") in ("ready", "success") else 1
+
+
 # ============================================================
 # 入口
 # ============================================================
@@ -487,6 +595,64 @@ def main():
     pubmd_p.add_argument("--output-dir", help="图片输出目录（默认临时目录）")
     pubmd_p.add_argument("--headless", default='true')
     pubmd_p.set_defaults(func=cmd_publish_md)
+
+    # publish-longform (发布长文笔记)
+    publf_p = subparsers.add_parser("publish-longform", help="发布长文笔记（创作者中心写长文）")
+    publf_p.add_argument("--title", required=True, help="标题")
+    publf_p.add_argument("--content", required=True, help="正文内容")
+    publf_p.add_argument("--auto-publish", action="store_true", help="自动点击发布")
+    publf_p.add_argument("--headless", default='true')
+    publf_p.set_defaults(func=cmd_publish_longform)
+
+    # reply-notification (通过通知页回复)
+    rpln_p = subparsers.add_parser("reply-notification", help="通过通知页回复评论")
+    rpln_p.add_argument("--content", required=True, help="回复内容")
+    rpln_p.add_argument("--index", type=int, default=0, help="通知索引（默认第一条）")
+    rpln_p.add_argument("--headless", default='true')
+    rpln_p.set_defaults(func=cmd_reply_notification)
+
+    # template (写作模板)
+    tmpl_p = subparsers.add_parser("template", help="生成写作模板")
+    tmpl_p.add_argument("--topic", required=True, help="主题关键词")
+    tmpl_p.add_argument("--type", default="图文", help="笔记类型（图文/视频/长文）")
+    tmpl_p.set_defaults(func=cmd_template)
+
+    # strategy init (初始化运营策略)
+    stri_p = subparsers.add_parser("strategy-init", help="初始化运营策略")
+    stri_p.add_argument("--persona", required=True, help="账号人设（如\"旅行博主\"）")
+    stri_p.add_argument("--audience", help="目标受众")
+    stri_p.add_argument("--direction", help="内容方向，逗号分隔")
+    stri_p.set_defaults(func=cmd_strategy_init)
+
+    # strategy show (显示运营策略)
+    strs_p = subparsers.add_parser("strategy-show", help="显示当前运营策略")
+    strs_p.set_defaults(func=cmd_strategy_show)
+
+    # strategy add-post (添加内容计划)
+    strap_p = subparsers.add_parser("strategy-add-post", help="添加内容日历条目")
+    strap_p.add_argument("--date", required=True, help="日期（YYYY-MM-DD）")
+    strap_p.add_argument("--topic", required=True, help="选题")
+    strap_p.add_argument("--type", default="图文", help="笔记类型")
+    strap_p.add_argument("--notes", help="备注")
+    strap_p.set_defaults(func=cmd_strategy_add_post)
+
+    # strategy check-limit (检查配额)
+    strcl_p = subparsers.add_parser("strategy-check-limit", help="检查每日互动配额")
+    strcl_p.add_argument("--limit-type", required=True, help="操作类型（likes/comments/replies/collects/publishes）")
+    strcl_p.set_defaults(func=cmd_strategy_check_limit)
+
+    # sop (SOP 编排)
+    sop_p = subparsers.add_parser("sop", help="执行 SOP 编排")
+    sop_p.add_argument("--type", dest="sop_type", required=True, help="SOP 类型（publish/comment/explore）")
+    sop_p.add_argument("--topic", help="选题（publish SOP 用）")
+    sop_p.add_argument("--note-type", help="笔记类型（publish SOP 用）")
+    sop_p.add_argument("--auto-publish", action="store_true", help="自动发布（publish SOP 用）")
+    sop_p.add_argument("--replies", help="回复列表 JSON（comment SOP 用）")
+    sop_p.add_argument("--feed-count", type=int, default=10, help="浏览笔记数（explore SOP 用）")
+    sop_p.add_argument("--like-prob", type=float, default=0.3, help="点赞概率（explore SOP 用）")
+    sop_p.add_argument("--collect-prob", type=float, default=0.1, help="收藏概率（explore SOP 用）")
+    sop_p.add_argument("--comment-prob", type=float, default=0.05, help="评论概率（explore SOP 用）")
+    sop_p.set_defaults(func=cmd_sop)
 
     args = parser.parse_args()
     if not args.command:

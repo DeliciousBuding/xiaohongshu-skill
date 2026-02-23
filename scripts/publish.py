@@ -142,7 +142,7 @@ class PublishAction:
         try:
             title_input = page.locator('div.d-input input')
             title_input.first.fill(title)
-            time.sleep(0.5)
+            time.sleep(random.uniform(0.5, 1.5))
 
             # 检查标题是否超长
             max_suffix = page.locator('div.title-container div.max_suffix')
@@ -185,8 +185,8 @@ class PublishAction:
         try:
             content_el.click()
             time.sleep(0.3)
-            page.keyboard.type(content, delay=30)
-            time.sleep(0.5)
+            page.keyboard.type(content, delay=random.randint(20, 60))
+            time.sleep(random.uniform(0.5, 1.5))
 
             # 检查正文是否超长
             length_error = page.locator('div.edit-container div.length-error')
@@ -344,23 +344,25 @@ class PublishAction:
 
         # 1. 上传图片
         self._upload_images(image_paths)
+        time.sleep(random.uniform(1.5, 3.0))
 
         # 2. 填写标题
         self._fill_title(title)
-        time.sleep(1)
+        time.sleep(random.uniform(1.0, 2.0))
 
         # 3. 填写正文
         self._fill_content(content)
-        time.sleep(1)
+        time.sleep(random.uniform(1.0, 2.5))
 
         # 4. 添加标签
         if tags:
             self._input_tags(tags)
-            time.sleep(1)
+            time.sleep(random.uniform(1.0, 2.0))
 
         # 5. 定时发布
         if schedule_time:
             self._set_schedule(schedule_time)
+            time.sleep(random.uniform(0.5, 1.5))
 
         # 6. 校验三要素
         ready = self._check_publish_ready()
@@ -420,23 +422,25 @@ class PublishAction:
 
         # 1. 上传视频
         self._upload_video(video_path)
+        time.sleep(random.uniform(1.5, 3.0))
 
         # 2. 填写标题
         self._fill_title(title)
-        time.sleep(1)
+        time.sleep(random.uniform(1.0, 2.0))
 
         # 3. 填写正文
         self._fill_content(content)
-        time.sleep(1)
+        time.sleep(random.uniform(1.0, 2.5))
 
         # 4. 添加标签
         if tags:
             self._input_tags(tags)
-            time.sleep(1)
+            time.sleep(random.uniform(1.0, 2.0))
 
         # 5. 定时发布
         if schedule_time:
             self._set_schedule(schedule_time)
+            time.sleep(random.uniform(0.5, 1.5))
 
         # 6. 校验
         ready = self._check_publish_ready()
@@ -461,6 +465,143 @@ class PublishAction:
                 "published": False,
                 "ready_check": ready,
                 "message": "已填写完毕，停在发布按钮处。请确认后使用 --auto-publish 发布。",
+            }
+
+
+    def publish_longform(
+        self,
+        title: str,
+        content: str,
+        auto_publish: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        发布长文笔记（通过创作者中心"写长文"功能）
+
+        流程：导航到创作者中心 → 点击「写长文」→「新的创作」→ 输入标题正文
+              → 一键排版 → 选择模板 → 下一步 → （可选）发布
+
+        Args:
+            title: 标题
+            content: 正文内容
+            auto_publish: 是否自动发布（默认 False，停在发布页）
+
+        Returns:
+            操作结果
+        """
+        page = self.client.page
+
+        # 1. 导航到创作者中心发布页
+        self._navigate_to_publish()
+        time.sleep(random.uniform(1.0, 2.0))
+
+        # 2. 点击侧边栏「写长文」
+        try:
+            longform_btn = page.get_by_text("写长文", exact=True)
+            if longform_btn.count() > 0:
+                longform_btn.first.click()
+            else:
+                # 回退：用选择器查找
+                page.locator('div.creator-tab:has-text("写长文")').click()
+            time.sleep(random.uniform(1.5, 3.0))
+            print("已点击「写长文」", file=sys.stderr)
+        except Exception as e:
+            print(f"点击「写长文」失败: {e}", file=sys.stderr)
+            return {"status": "error", "action": "publish_longform", "message": f"点击写长文失败: {e}"}
+
+        # 3. 点击「新的创作」
+        try:
+            new_btn = page.get_by_text("新的创作", exact=False)
+            if new_btn.count() > 0:
+                new_btn.first.click()
+                time.sleep(random.uniform(2.0, 3.5))
+                print("已点击「新的创作」", file=sys.stderr)
+        except Exception as e:
+            print(f"点击「新的创作」失败（可能已在编辑页）: {e}", file=sys.stderr)
+
+        # 4. 输入标题
+        try:
+            title_input = page.locator('input[placeholder*="标题"], div.title-input input, div.d-input input')
+            if title_input.count() > 0:
+                title_input.first.fill(title)
+                time.sleep(random.uniform(0.5, 1.5))
+                print(f"长文标题已填写: {title}", file=sys.stderr)
+            else:
+                print("未找到长文标题输入框", file=sys.stderr)
+        except Exception as e:
+            print(f"填写长文标题失败: {e}", file=sys.stderr)
+
+        # 5. 输入正文
+        time.sleep(random.uniform(0.5, 1.0))
+        try:
+            # 长文编辑器可能是 Quill 或 contenteditable
+            editor = None
+            for selector in ['div.ql-editor', '[role="textbox"]', 'div[contenteditable="true"]']:
+                loc = page.locator(selector)
+                if loc.count() > 0:
+                    editor = loc.first
+                    break
+
+            if editor:
+                editor.click()
+                time.sleep(random.uniform(0.3, 0.8))
+                page.keyboard.type(content, delay=random.randint(15, 40))
+                time.sleep(random.uniform(0.5, 1.5))
+                print("长文正文已填写", file=sys.stderr)
+            else:
+                print("未找到长文正文编辑器", file=sys.stderr)
+        except Exception as e:
+            print(f"填写长文正文失败: {e}", file=sys.stderr)
+
+        # 6. 点击「一键排版」
+        time.sleep(random.uniform(1.0, 2.0))
+        try:
+            format_btn = page.get_by_text("一键排版", exact=False)
+            if format_btn.count() > 0:
+                format_btn.first.click()
+                time.sleep(random.uniform(2.0, 3.5))
+                print("已点击「一键排版」", file=sys.stderr)
+            else:
+                print("未找到「一键排版」按钮，跳过", file=sys.stderr)
+        except Exception as e:
+            print(f"点击一键排版失败: {e}", file=sys.stderr)
+
+        # 7. 选择模板（第一个「简约基础」）
+        try:
+            template_items = page.locator('.template-item, .style-item')
+            if template_items.count() > 0:
+                template_items.first.click()
+                time.sleep(random.uniform(1.0, 2.0))
+                print("已选择排版模板", file=sys.stderr)
+        except Exception as e:
+            print(f"选择模板失败: {e}", file=sys.stderr)
+
+        # 8. 点击「下一步」
+        try:
+            next_btn = page.get_by_text("下一步", exact=True)
+            if next_btn.count() > 0:
+                next_btn.first.click()
+                time.sleep(random.uniform(2.0, 3.5))
+                print("已点击「下一步」", file=sys.stderr)
+        except Exception as e:
+            print(f"点击下一步失败: {e}", file=sys.stderr)
+
+        # 9. 是否自动发布
+        if auto_publish:
+            success = self._click_publish_button()
+            return {
+                "status": "success" if success else "error",
+                "action": "publish_longform",
+                "title": title,
+                "published": success,
+                "message": "长文发布成功" if success else "长文发布失败",
+            }
+        else:
+            return {
+                "status": "ready",
+                "action": "publish_longform",
+                "title": title,
+                "published": False,
+                "message": "长文已填写完毕，停在发布页。请确认后使用 --auto-publish 发布。",
             }
 
 
@@ -637,6 +778,25 @@ def publish_video(
         return action.publish_video(
             title=title, content=content, video_path=video_path,
             tags=tags, schedule_time=schedule_time, auto_publish=auto_publish,
+        )
+    finally:
+        client.close()
+
+
+def publish_longform(
+    title: str,
+    content: str,
+    auto_publish: bool = False,
+    headless: bool = True,
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+) -> Dict[str, Any]:
+    """发布长文笔记"""
+    client = XiaohongshuClient(headless=headless, cookie_path=cookie_path)
+    try:
+        client.start()
+        action = PublishAction(client)
+        return action.publish_longform(
+            title=title, content=content, auto_publish=auto_publish,
         )
     finally:
         client.close()
