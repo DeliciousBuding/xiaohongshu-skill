@@ -9,8 +9,12 @@ from . import login
 from . import search
 from . import feed
 from . import user
+from . import comment
+from . import interact
+from . import explore
+from . import publish
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "XiaohongshuClient",
     "create_client",
@@ -19,4 +23,8 @@ __all__ = [
     "search",
     "feed",
     "user",
+    "comment",
+    "interact",
+    "explore",
+    "publish",
 ]

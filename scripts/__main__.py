@@ -22,6 +22,7 @@ from . import user
 from . import comment
 from . import interact
 from . import explore
+from . import publish
 
 
 def format_output(data) -> str:
@@ -268,6 +269,72 @@ def cmd_explore(args):
     return 0
 
 
+def cmd_publish(args):
+    """发布图文笔记"""
+    image_paths = [p.strip() for p in args.images.split(",") if p.strip()]
+    tags = [t.strip() for t in args.tags.split(",")] if args.tags else None
+    result = publish.publish_image(
+        title=args.title,
+        content=args.content,
+        image_paths=image_paths,
+        tags=tags,
+        schedule_time=args.schedule_time,
+        auto_publish=args.auto_publish,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") in ("success", "ready") else 1
+
+
+def cmd_publish_video(args):
+    """发布视频笔记"""
+    tags = [t.strip() for t in args.tags.split(",")] if args.tags else None
+    result = publish.publish_video(
+        title=args.title,
+        content=args.content,
+        video_path=args.video,
+        tags=tags,
+        schedule_time=args.schedule_time,
+        auto_publish=args.auto_publish,
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") in ("success", "ready") else 1
+
+
+def cmd_publish_md(args):
+    """将 Markdown 渲染为图片后发布图文笔记"""
+    tags = [t.strip() for t in args.tags.split(",")] if args.tags else None
+
+    # 从文件或直接文本读取 Markdown
+    if args.file:
+        with open(args.file, "r", encoding="utf-8") as f:
+            markdown_text = f.read()
+    else:
+        markdown_text = args.text
+
+    if not markdown_text:
+        print(format_output({"status": "error", "message": "需要提供 --file 或 --text"}))
+        return 1
+
+    result = publish.publish_markdown(
+        title=args.title,
+        markdown_text=markdown_text,
+        extra_content=args.content or "",
+        tags=tags,
+        schedule_time=args.schedule_time,
+        auto_publish=args.auto_publish,
+        image_width=args.width,
+        output_dir=args.output_dir or "",
+        headless=_headless(args),
+        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") in ("success", "ready") else 1
+
+
 # ============================================================
 # 入口
 # ============================================================
@@ -384,6 +451,42 @@ def main():
     exp_p.add_argument("--limit", "-n", type=int, default=20, help="返回数量")
     exp_p.add_argument("--headless", default='true')
     exp_p.set_defaults(func=cmd_explore)
+
+    # publish (发布图文笔记)
+    pub_p = subparsers.add_parser("publish", help="发布图文笔记")
+    pub_p.add_argument("--title", required=True, help="标题（建议 <=20 字）")
+    pub_p.add_argument("--content", required=True, help="正文内容")
+    pub_p.add_argument("--images", required=True, help="图片路径，逗号分隔")
+    pub_p.add_argument("--tags", help="话题标签，逗号分隔")
+    pub_p.add_argument("--schedule-time", help="定时发布（格式: 2025-01-01 12:00）")
+    pub_p.add_argument("--auto-publish", action="store_true", help="自动点击发布（默认停在发布按钮处）")
+    pub_p.add_argument("--headless", default='true')
+    pub_p.set_defaults(func=cmd_publish)
+
+    # publish-video (发布视频笔记)
+    pubv_p = subparsers.add_parser("publish-video", help="发布视频笔记")
+    pubv_p.add_argument("--title", required=True, help="标题")
+    pubv_p.add_argument("--content", required=True, help="正文内容")
+    pubv_p.add_argument("--video", required=True, help="视频文件路径")
+    pubv_p.add_argument("--tags", help="话题标签，逗号分隔")
+    pubv_p.add_argument("--schedule-time", help="定时发布（格式: 2025-01-01 12:00）")
+    pubv_p.add_argument("--auto-publish", action="store_true", help="自动点击发布")
+    pubv_p.add_argument("--headless", default='true')
+    pubv_p.set_defaults(func=cmd_publish_video)
+
+    # publish-md (Markdown 转图片后发布)
+    pubmd_p = subparsers.add_parser("publish-md", help="Markdown 渲染为图片后发布")
+    pubmd_p.add_argument("--title", required=True, help="标题")
+    pubmd_p.add_argument("--file", help="Markdown 文件路径")
+    pubmd_p.add_argument("--text", help="Markdown 文本（与 --file 二选一）")
+    pubmd_p.add_argument("--content", help="正文区额外文字说明")
+    pubmd_p.add_argument("--tags", help="话题标签，逗号分隔")
+    pubmd_p.add_argument("--schedule-time", help="定时发布")
+    pubmd_p.add_argument("--auto-publish", action="store_true", help="自动点击发布")
+    pubmd_p.add_argument("--width", type=int, default=1080, help="图片宽度（默认 1080）")
+    pubmd_p.add_argument("--output-dir", help="图片输出目录（默认临时目录）")
+    pubmd_p.add_argument("--headless", default='true')
+    pubmd_p.set_defaults(func=cmd_publish_md)
 
     args = parser.parse_args()
     if not args.command:
