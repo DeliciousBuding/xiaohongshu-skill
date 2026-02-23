@@ -88,6 +88,63 @@ class XiaohongshuClient:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    # 反检测隐身脚本：覆盖 headless Chromium 的自动化特征
+    STEALTH_JS = """
+    // 1. 移除 navigator.webdriver 标记
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // 2. 伪造 chrome 运行时对象
+    if (!window.chrome) { window.chrome = {}; }
+    if (!window.chrome.runtime) {
+        window.chrome.runtime = {
+            onMessage: { addListener: function(){}, removeListener: function(){} },
+            sendMessage: function(){},
+            connect: function(){ return { onMessage: { addListener: function(){} }, postMessage: function(){} }; }
+        };
+    }
+
+    // 3. 伪造插件列表（headless 默认为空）
+    Object.defineProperty(navigator, 'plugins', {
+        get: () => {
+            const arr = [
+                { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
+            ];
+            arr.item = (i) => arr[i] || null;
+            arr.namedItem = (n) => arr.find(p => p.name === n) || null;
+            arr.refresh = () => {};
+            return arr;
+        }
+    });
+
+    // 4. 伪造语言列表
+    Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en-US', 'en'] });
+
+    // 5. 修复 Permissions API（headless 返回异常状态）
+    if (navigator.permissions) {
+        const origQuery = navigator.permissions.query.bind(navigator.permissions);
+        navigator.permissions.query = (params) => {
+            if (params.name === 'notifications') {
+                return Promise.resolve({ state: Notification.permission });
+            }
+            return origQuery(params);
+        };
+    }
+
+    // 6. 伪造 WebGL 渲染器信息
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(param) {
+        if (param === 37445) return 'Intel Inc.';
+        if (param === 37446) return 'Intel Iris OpenGL Engine';
+        return getParameter.call(this, param);
+    };
+
+    // 7. 隐藏自动化相关的 CDP 痕迹
+    const originalCall = Function.prototype.call;
+    // 防止通过 Error.stack 检测 puppeteer/playwright 注入
+    """
+
     def start(self):
         """启动浏览器（持久化上下文，自动保存全部会话状态）"""
         self.playwright = sync_playwright().start()
@@ -98,10 +155,23 @@ class XiaohongshuClient:
             user_data_dir=self.user_data_dir,
             headless=self.headless,
             viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            args=['--disable-blink-features=AutomationControlled'],
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            locale='zh-CN',
+            timezone_id='Asia/Shanghai',
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-infobars',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+            ],
+            ignore_default_args=['--enable-automation'],
         )
         self.browser = None  # persistent context 无需单独的 browser 对象
+
+        # 注入反检测隐身脚本（在每个新页面加载前执行）
+        self.context.add_init_script(self.STEALTH_JS)
 
         # 如果持久化目录是新的但有旧 cookie 备份文件，迁移恢复
         if not self.context.cookies() and os.path.exists(self.cookie_path):
