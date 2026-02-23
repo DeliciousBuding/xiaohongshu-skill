@@ -1,22 +1,21 @@
 ---
-name: xiaohongshu
-description: 当用户想要与小红书（Xiaohongshu/RED）交互时使用此 Skill。包括搜索笔记、获取帖子详情、查看用户主页、二维码扫码登录、提取平台内容等。当用户提到 xiaohongshu、小红书、RED，或需要浏览/抓取中国社交媒体内容时激活此 Skill。
+name: xiaohongshu-skill
+description: 当用户想要与小红书（xiaohongshu/rednote）交互时使用此 Skill。包括搜索笔记、获取帖子详情、查看用户主页、二维码扫码登录、提取平台内容等。当用户提到 xiaohongshu、小红书、rednote，或需要浏览/抓取中国社交媒体内容时激活此 Skill。
+user-invokable: true
+metadata: {"openclaw": {"emoji": "📕", "requires": {"bins": ["python3", "playwright"], "anyBins": ["python3", "python"]}, "os": ["win32", "linux", "darwin"], "install": [{"id": "pip", "kind": "node", "label": "Install dependencies (pip)", "bins": ["playwright"]}]}}
 ---
 
 # 小红书 Skill
 
-基于 Python Playwright 的小红书（RED）交互工具，通过浏览器自动化实现数据提取。
-
-## 工作原理
-
-通过 Playwright 控制无头 Chromium 浏览器，导航到小红书页面，从 `window.__INITIAL_STATE__`（Vue SSR 状态）中提取结构化数据。这种方式避免了不稳定的 API 逆向工程，配合 Cookie 认证可靠运行。
+基于 Python Playwright 的小红书（rednote）交互工具，通过浏览器自动化从 `window.__INITIAL_STATE__`（Vue SSR 状态）中提取结构化数据。
 
 ## 前置条件
 
-首次使用前，确保已安装依赖：
+在 `{baseDir}` 目录下安装依赖：
 
 ```bash
-pip install playwright>=1.40.0
+cd {baseDir}
+pip install -r requirements.txt
 playwright install chromium
 ```
 
@@ -27,11 +26,13 @@ playwright install-deps chromium
 
 ## 快速开始
 
-所有命令从 Skill 根目录运行。
+所有命令从 `{baseDir}` 目录运行。
 
 ### 1. 登录（首次必须）
 
 ```bash
+cd {baseDir}
+
 # 打开浏览器窗口，显示二维码供微信/小红书扫描
 python -m scripts qrcode --headless=false
 
@@ -39,11 +40,13 @@ python -m scripts qrcode --headless=false
 python -m scripts check-login
 ```
 
-在无头环境下，二维码图片保存到 `data/qrcode.png`，可通过其他渠道发送扫码。
+在无头环境下，二维码图片保存到 `{baseDir}/data/qrcode.png`，可通过其他渠道发送扫码。
 
 ### 2. 搜索
 
 ```bash
+cd {baseDir}
+
 # 基础搜索
 python -m scripts search "关键词"
 
@@ -61,6 +64,8 @@ python -m scripts search "美食" --sort-by=最新 --note-type=图文 --limit=10
 ### 3. 帖子详情
 
 ```bash
+cd {baseDir}
+
 # 使用搜索结果中的 id 和 xsec_token
 python -m scripts feed <feed_id> <xsec_token>
 
@@ -71,6 +76,7 @@ python -m scripts feed <feed_id> <xsec_token> --load-comments --max-comments=20
 ### 4. 用户主页
 
 ```bash
+cd {baseDir}
 python -m scripts user <user_id> [xsec_token]
 ```
 
@@ -98,7 +104,7 @@ const data = obj.value !== undefined ? obj.value : obj._value;
 
 **触发验证码时的处理：**
 1. 等待几分钟后重试
-2. 运行 `python -m scripts qrcode --headless=false` 手动通过验证
+2. 运行 `cd {baseDir} && python -m scripts qrcode --headless=false` 手动通过验证
 3. 如 Cookie 失效，重新扫码登录
 
 ## 输出格式
@@ -121,7 +127,7 @@ const data = obj.value !== undefined ? obj.value : obj._value;
 ## 文件结构
 
 ```
-xiaohongshu-skill/
+{baseDir}/
 ├── SKILL.md              # 本文件（Skill 规范）
 ├── README.md             # 项目文档
 ├── requirements.txt      # Python 依赖
