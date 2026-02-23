@@ -1,121 +1,167 @@
 # xiaohongshu-skill
 
-A Claude Code Skill for interacting with [Xiaohongshu](https://www.xiaohongshu.com) (小红书/RED) — China's popular lifestyle and social commerce platform.
+一个用于 [小红书](https://www.xiaohongshu.com)（RED）的 Claude Code Skill，基于 Python + Playwright 浏览器自动化实现。
 
-Built with Python + Playwright, this skill enables searching posts, extracting content, viewing user profiles, and managing login sessions through browser automation.
+支持搜索笔记、提取帖子详情、查看用户主页、二维码扫码登录，并内置反爬保护机制。
 
-## Features
+## 功能特性
 
-- **QR Code Login** — Scan to authenticate, cookies persist across sessions
-- **Search** — Full-text search with filters (sort, type, time, scope, location)
-- **Post Detail** — Extract title, body, images, comments, and engagement metrics
-- **User Profile** — Get user info, follower counts, and note listings
-- **Anti-Bot Protection** — Built-in rate limiting, captcha detection, and human-like delays
+- **二维码登录** — 扫码认证，Cookie 跨会话持久化
+- **搜索笔记** — 全文搜索，支持排序、类型、时间、范围、地点等筛选条件
+- **帖子详情** — 提取标题、正文、图片、评论及互动数据（点赞/收藏/评论数）
+- **用户主页** — 获取用户信息、粉丝数、笔记列表（自动识别置顶帖）
+- **反爬保护** — 内置请求频率控制、验证码检测、仿人类延迟
 
-## Installation
+## 安装
 
 ```bash
-# Clone the repository
-git clone https://github.com/perlica/xiaohongshu-skill.git
+# 克隆仓库
+git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
 cd xiaohongshu-skill
 
-# Install dependencies
+# 安装依赖
 pip install -r requirements.txt
 playwright install chromium
 
-# On Linux/WSL, also install system dependencies
+# Linux/WSL 环境还需安装系统依赖
 playwright install-deps chromium
 ```
 
-## Usage
+## 使用方法
 
-### Login (required first time)
+### 登录（首次使用必须）
 
 ```bash
-# Opens browser for QR code scanning
+# 打开浏览器窗口，显示二维码供扫描
 python -m scripts qrcode --headless=false
 
-# Verify login status
+# 检查登录状态
 python -m scripts check-login
 ```
 
-### Search
+在无头模式下，二维码图片会保存到 `data/qrcode.png`，可通过其他方式（如 Telegram）发送扫码。
+
+### 搜索
 
 ```bash
-# Basic search
+# 基础搜索
 python -m scripts search "美食推荐" --limit=5
 
-# With filters
+# 带筛选条件
 python -m scripts search "旅行攻略" --sort-by=最新 --note-type=图文 --limit=10
 ```
 
-### Post Detail
+**筛选选项：**
+- `--sort-by`：综合、最新、最多点赞、最多评论、最多收藏
+- `--note-type`：不限、视频、图文
+- `--publish-time`：不限、一天内、一周内、半年内
+- `--search-scope`：不限、已看过、未看过、已关注
+- `--location`：不限、同城、附近
+
+### 帖子详情
 
 ```bash
-# Use id and xsec_token from search results
+# 使用搜索结果中的 id 和 xsec_token
 python -m scripts feed <feed_id> <xsec_token>
 
-# With comments
-python -m scripts feed <feed_id> <xsec_token> --load-comments
+# 加载评论
+python -m scripts feed <feed_id> <xsec_token> --load-comments --max-comments=20
 ```
 
-### User Profile
+### 用户主页
 
 ```bash
-python -m scripts user <user_id>
+python -m scripts user <user_id> [xsec_token]
 ```
 
-## Architecture
+## 项目结构
 
 ```
-scripts/
-├── client.py    # Playwright browser wrapper with rate limiting & captcha detection
-├── login.py     # QR code authentication flow
-├── search.py    # Search with filter support
-├── feed.py      # Post detail & comment extraction
-├── user.py      # User profile & note listing
-└── __main__.py  # CLI entry point
+xiaohongshu-skill/
+├── SKILL.md              # Skill 规范文件（供 Claude Code 识别）
+├── README.md             # 项目文档
+├── requirements.txt      # Python 依赖
+├── LICENSE               # MIT 许可证
+├── data/                 # 运行时数据（二维码、调试输出）
+└── scripts/              # 核心模块
+    ├── __init__.py
+    ├── __main__.py       # CLI 入口
+    ├── client.py         # 浏览器客户端封装（频率控制 + 验证码检测）
+    ├── login.py          # 二维码扫码登录流程
+    ├── search.py         # 搜索（支持多种筛选条件）
+    ├── feed.py           # 帖子详情 + 评论提取
+    └── user.py           # 用户主页 + 笔记列表
 ```
 
-### How It Works
+## 工作原理
 
-1. Launches headless Chromium via Playwright
-2. Loads saved cookies for authentication
-3. Navigates to Xiaohongshu pages
-4. Extracts data from `window.__INITIAL_STATE__` (Vue SSR state)
-5. Returns structured JSON results
+1. 通过 Playwright 启动无头 Chromium 浏览器
+2. 加载已保存的 Cookie 进行身份认证
+3. 导航到小红书页面
+4. 从 `window.__INITIAL_STATE__`（Vue SSR 状态）中提取结构化数据
+5. 返回 JSON 格式结果
 
-### Anti-Bot Measures
+### 反爬机制
 
-Xiaohongshu has aggressive anti-scraping. This skill handles it with:
+小红书有严格的反爬策略，本工具通过以下方式应对：
 
-- **Request throttling**: 3-6s random delay between navigations
-- **Burst protection**: 10s cooldown after every 5 consecutive requests
-- **Captcha detection**: Monitors for security verification redirects
-- **Session management**: Cookie persistence and status checking
+- **请求频率控制**：两次导航间随机延迟 3-6 秒
+- **连续请求冷却**：每连续 5 次请求后额外冷却 10 秒
+- **验证码检测**：监测安全验证页面重定向，触发时抛出 `CaptchaError` 并给出处理建议
+- **会话管理**：Cookie 持久化与登录状态检查
 
-## Platform Compatibility
+**触发验证码时的处理：**
+1. 等待几分钟后重试
+2. 运行 `python -m scripts qrcode --headless=false` 手动通过验证
+3. 如 Cookie 失效，重新扫码登录
 
-| Platform | Status | Notes |
-|----------|--------|-------|
-| Windows 11 | Fully supported | Primary development platform |
-| WSL2 (Ubuntu) | Supported | Headless works out of box; headed needs WSLg |
-| Linux Server | Supported | Headless only; QR code saved as image file |
-| macOS | Should work | Not tested |
+## 输出格式
 
-## Requirements
+所有命令输出 JSON 到标准输出。搜索结果示例：
+
+```json
+{
+  "id": "abc123",
+  "xsec_token": "ABxyz...",
+  "title": "帖子标题",
+  "type": "normal",
+  "user": "用户名",
+  "user_id": "user123",
+  "liked_count": "1234",
+  "collected_count": "567",
+  "comment_count": "89"
+}
+```
+
+## 平台兼容性
+
+| 平台 | 状态 | 备注 |
+|------|------|------|
+| Windows 11 | 完全支持 | 主要开发环境 |
+| WSL2 (Ubuntu) | 支持 | 无头模式开箱即用；有头模式需要 WSLg |
+| Linux 服务器 | 支持 | 仅无头模式；二维码保存为图片文件 |
+| macOS | 应该可用 | 未经测试 |
+
+## 环境要求
 
 - Python 3.10+
 - Playwright >= 1.40.0
 
-## As a Claude Code Skill
+## 作为 Claude Code Skill 使用
 
-This project follows the [Agent Skills Specification](https://agentskills.io/specification). To use it as a Claude Code skill, add the `SKILL.md` file to your Claude Code configuration.
+本项目遵循 [Agent Skills 规范](https://agentskills.io/specification)。将 `SKILL.md` 添加到你的 Claude Code 配置中即可作为 Skill 使用。
 
-## License
+## 注意事项
 
-MIT
+1. **Cookie 过期**：Cookie 会定期过期，`check-login` 返回 false 时需重新登录
+2. **频率限制**：过度抓取会触发验证码，请依赖内置的频率控制
+3. **xsec_token**：Token 与会话绑定，始终使用搜索/用户结果中的最新 Token
+4. **仅供学习**：请遵守小红书的使用条款，本工具仅用于学习研究
 
-## Credits
+## 许可证
 
-Inspired by [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp) (Go version).
+[MIT](LICENSE)
+
+## 致谢
+
+灵感来源于 [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp)（Go 版本）。

@@ -1,116 +1,116 @@
 ---
 name: xiaohongshu
-description: Use this skill when the user wants to interact with Xiaohongshu (小红书, RED). This includes searching for posts, getting post details, viewing user profiles, logging in via QR code, and extracting content from the platform. Activate this skill when the user mentions xiaohongshu, 小红书, RED, or wants to scrape/browse Chinese social media content.
+description: 当用户想要与小红书（Xiaohongshu/RED）交互时使用此 Skill。包括搜索笔记、获取帖子详情、查看用户主页、二维码扫码登录、提取平台内容等。当用户提到 xiaohongshu、小红书、RED，或需要浏览/抓取中国社交媒体内容时激活此 Skill。
 ---
 
-# Xiaohongshu (小红书) Skill
+# 小红书 Skill
 
-A Python Playwright-based tool for interacting with Xiaohongshu (小红书/RED), the popular Chinese social media platform.
+基于 Python Playwright 的小红书（RED）交互工具，通过浏览器自动化实现数据提取。
 
-## How It Works
+## 工作原理
 
-This skill controls a headless Chromium browser via Playwright, navigates to Xiaohongshu pages, and extracts structured data from `window.__INITIAL_STATE__` (Vue SSR state). This approach avoids unstable API reverse-engineering and works reliably with cookie-based authentication.
+通过 Playwright 控制无头 Chromium 浏览器，导航到小红书页面，从 `window.__INITIAL_STATE__`（Vue SSR 状态）中提取结构化数据。这种方式避免了不稳定的 API 逆向工程，配合 Cookie 认证可靠运行。
 
-## Prerequisites
+## 前置条件
 
-Before first use, ensure dependencies are installed:
+首次使用前，确保已安装依赖：
 
 ```bash
 pip install playwright>=1.40.0
 playwright install chromium
 ```
 
-On Linux/WSL, also run:
+Linux/WSL 环境还需运行：
 ```bash
 playwright install-deps chromium
 ```
 
-## Quick Start
+## 快速开始
 
-All commands are run from the skill's root directory.
+所有命令从 Skill 根目录运行。
 
-### 1. Login (Required First)
+### 1. 登录（首次必须）
 
 ```bash
-# Opens a browser window with QR code for WeChat/Xiaohongshu scan
+# 打开浏览器窗口，显示二维码供微信/小红书扫描
 python -m scripts qrcode --headless=false
 
-# Check if login is still valid
+# 检查登录是否仍然有效
 python -m scripts check-login
 ```
 
-The QR code image is saved to `data/qrcode.png` for headless environments (e.g., send via Telegram).
+在无头环境下，二维码图片保存到 `data/qrcode.png`，可通过其他渠道发送扫码。
 
-### 2. Search
+### 2. 搜索
 
 ```bash
-# Basic search
+# 基础搜索
 python -m scripts search "关键词"
 
-# With filters
+# 带筛选条件
 python -m scripts search "美食" --sort-by=最新 --note-type=图文 --limit=10
 ```
 
-**Filter options:**
-- `--sort-by`: 综合, 最新, 最多点赞, 最多评论, 最多收藏
-- `--note-type`: 不限, 视频, 图文
-- `--publish-time`: 不限, 一天内, 一周内, 半年内
-- `--search-scope`: 不限, 已看过, 未看过, 已关注
-- `--location`: 不限, 同城, 附近
+**筛选选项：**
+- `--sort-by`：综合、最新、最多点赞、最多评论、最多收藏
+- `--note-type`：不限、视频、图文
+- `--publish-time`：不限、一天内、一周内、半年内
+- `--search-scope`：不限、已看过、未看过、已关注
+- `--location`：不限、同城、附近
 
-### 3. Post Detail (Feed)
+### 3. 帖子详情
 
 ```bash
-# Get post content (use id and xsec_token from search results)
+# 使用搜索结果中的 id 和 xsec_token
 python -m scripts feed <feed_id> <xsec_token>
 
-# With comments
+# 加载评论
 python -m scripts feed <feed_id> <xsec_token> --load-comments --max-comments=20
 ```
 
-### 4. User Profile
+### 4. 用户主页
 
 ```bash
 python -m scripts user <user_id> [xsec_token]
 ```
 
-## Data Extraction Paths
+## 数据提取路径
 
-| Data Type | JavaScript Path |
-|-----------|----------------|
-| Search Results | `window.__INITIAL_STATE__.search.feeds` |
-| Post Detail | `window.__INITIAL_STATE__.note.noteDetailMap` |
-| User Profile | `window.__INITIAL_STATE__.user.userPageData` |
-| User Notes | `window.__INITIAL_STATE__.user.notes` |
+| 数据类型 | JavaScript 路径 |
+|----------|----------------|
+| 搜索结果 | `window.__INITIAL_STATE__.search.feeds` |
+| 帖子详情 | `window.__INITIAL_STATE__.note.noteDetailMap` |
+| 用户信息 | `window.__INITIAL_STATE__.user.userPageData` |
+| 用户笔记 | `window.__INITIAL_STATE__.user.notes` |
 
-**Vue Ref handling:** Always unwrap via `.value` or `._value`:
+**Vue Ref 处理：** 始终通过 `.value` 或 `._value` 解包：
 ```javascript
 const data = obj.value !== undefined ? obj.value : obj._value;
 ```
 
-## Anti-Scraping Protection
+## 反爬保护
 
-This skill includes built-in protection against Xiaohongshu's anti-bot measures:
+本 Skill 内置了针对小红书反机器人策略的保护措施：
 
-- **Rate limiting**: Automatic 3-6s delay between page navigations, 10s cooldown every 5 requests
-- **Captcha detection**: Automatically detects security verification redirects and raises `CaptchaError` with actionable advice
-- **Human-like behavior**: Randomized delays, scroll patterns, and user-agent spoofing
+- **频率控制**：两次导航间自动延迟 3-6 秒，每 5 次连续请求后冷却 10 秒
+- **验证码检测**：自动检测安全验证页面重定向，触发时抛出 `CaptchaError` 并给出处理建议
+- **仿人类行为**：随机延迟、滚动模式、User-Agent 伪装
 
-**If you hit a captcha:**
-1. Wait a few minutes before retrying
-2. Run `python -m scripts qrcode --headless=false` to manually pass verification
-3. Re-scan QR code if cookies are invalidated
+**触发验证码时的处理：**
+1. 等待几分钟后重试
+2. 运行 `python -m scripts qrcode --headless=false` 手动通过验证
+3. 如 Cookie 失效，重新扫码登录
 
-## Output Format
+## 输出格式
 
-All commands output JSON to stdout. Example search result:
+所有命令输出 JSON 到标准输出。搜索结果示例：
 ```json
 {
   "id": "abc123",
   "xsec_token": "ABxyz...",
-  "title": "Post title",
+  "title": "帖子标题",
   "type": "normal",
-  "user": "Username",
+  "user": "用户名",
   "user_id": "user123",
   "liked_count": "1234",
   "collected_count": "567",
@@ -118,35 +118,36 @@ All commands output JSON to stdout. Example search result:
 }
 ```
 
-## File Structure
+## 文件结构
 
 ```
 xiaohongshu-skill/
-├── SKILL.md              # This file (skill specification)
-├── README.md             # Project documentation
-├── requirements.txt      # Python dependencies
-├── data/                 # Runtime data (QR codes, debug output)
-└── scripts/              # Core Python modules
+├── SKILL.md              # 本文件（Skill 规范）
+├── README.md             # 项目文档
+├── requirements.txt      # Python 依赖
+├── LICENSE               # MIT 许可证
+├── data/                 # 运行时数据（二维码、调试输出）
+└── scripts/              # 核心模块
     ├── __init__.py
-    ├── __main__.py       # CLI entry point
-    ├── client.py         # Browser client (Playwright wrapper)
-    ├── login.py          # QR code login flow
-    ├── search.py         # Search with filters
-    ├── feed.py           # Post detail extraction
-    └── user.py           # User profile extraction
+    ├── __main__.py       # CLI 入口
+    ├── client.py         # 浏览器客户端封装（频率控制 + 验证码检测）
+    ├── login.py          # 二维码扫码登录流程
+    ├── search.py         # 搜索（支持多种筛选）
+    ├── feed.py           # 帖子详情提取
+    └── user.py           # 用户主页提取
 ```
 
-## Cross-Platform Notes
+## 跨平台兼容性
 
-| Environment | Headless | Headed (QR Login) | Notes |
-|-------------|----------|-------------------|-------|
-| Windows | Works | Works | Primary dev environment |
-| WSL2 (Win11) | Works | Works via WSLg | Need `playwright install-deps` |
-| Linux Server | Works | N/A | Use headless QR + send image |
+| 环境 | 无头模式 | 有头模式（扫码登录） | 备注 |
+|------|----------|----------------------|------|
+| Windows | 支持 | 支持 | 主要开发环境 |
+| WSL2 (Win11) | 支持 | 通过 WSLg 支持 | 需要 `playwright install-deps` |
+| Linux 服务器 | 支持 | 不适用 | 二维码保存为图片文件 |
 
-## Important Caveats
+## 注意事项
 
-1. **Cookie expiry**: Cookies expire periodically; re-login when `check-login` returns false
-2. **Rate limits**: Excessive scraping triggers captchas; use built-in throttling
-3. **xsec_token**: Tokens are session-bound; always use fresh tokens from search/user results
-4. **Educational use only**: Respect Xiaohongshu's ToS; this tool is for learning purposes
+1. **Cookie 过期**：Cookie 会定期过期，`check-login` 返回 false 时需重新登录
+2. **频率限制**：过度抓取会触发验证码，请依赖内置的频率控制
+3. **xsec_token**：Token 与会话绑定，始终使用搜索/用户结果中的最新 Token
+4. **仅供学习**：请遵守小红书的使用条款，本工具仅用于学习研究
