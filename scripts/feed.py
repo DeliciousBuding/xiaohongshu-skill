@@ -11,6 +11,7 @@ import random
 from typing import Optional, Dict, Any, Tuple
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from ._utils import make_feed_url
 
 
 class FeedDetailAction:
@@ -20,8 +21,8 @@ class FeedDetailAction:
         self.client = client
 
     def _make_feed_detail_url(self, feed_id: str, xsec_token: str, xsec_source: str = "pc_feed") -> str:
-        """构建笔记详情 URL"""
-        return f"https://www.xiaohongshu.com/explore/{feed_id}?xsec_token={xsec_token}&xsec_source={xsec_source}"
+        """构建笔记详情 URL（委托给 _utils.make_feed_url）"""
+        return make_feed_url(feed_id, xsec_token, xsec_source)
 
     def _scroll_to_comments(self):
         """滚动到评论区域"""

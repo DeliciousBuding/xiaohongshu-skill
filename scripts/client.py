@@ -12,6 +12,8 @@ import time
 from pathlib import Path
 from typing import Optional, Any, Dict
 
+from ._utils import unwrap_value
+
 try:
     from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page, Playwright
 except ImportError:
@@ -141,7 +143,6 @@ class XiaohongshuClient:
     };
 
     // 7. 隐藏自动化相关的 CDP 痕迹
-    const originalCall = Function.prototype.call;
     // 防止通过 Error.stack 检测 puppeteer/playwright 注入
     """
 
@@ -378,15 +379,6 @@ class XiaohongshuClient:
         """
         state = self.get_initial_state()
 
-        # 处理 value/_value
-        def get_value(obj):
-            if isinstance(obj, dict):
-                if 'value' in obj:
-                    return obj['value']
-                if '_value' in obj:
-                    return obj['_value']
-            return obj
-
         keys = path.split('.')
         current = state
 
@@ -397,7 +389,7 @@ class XiaohongshuClient:
                 current = current.get(key)
             else:
                 return None
-            current = get_value(current)
+            current = unwrap_value(current)
 
         return current
 

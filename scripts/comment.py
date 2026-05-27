@@ -12,6 +12,7 @@ import random
 from typing import Optional, Dict, Any
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from ._utils import make_feed_url
 
 # 评论安全常量（来自 xiaohongshu-ops）
 MAX_COMMENT_LENGTH = 280
@@ -30,8 +31,8 @@ class CommentAction:
         self.client = client
 
     def _make_feed_url(self, feed_id: str, xsec_token: str, xsec_source: str = "pc_feed") -> str:
-        """构建笔记详情 URL"""
-        return f"https://www.xiaohongshu.com/explore/{feed_id}?xsec_token={xsec_token}&xsec_source={xsec_source}"
+        """构建笔记详情 URL（委托给 _utils.make_feed_url）"""
+        return make_feed_url(feed_id, xsec_token, xsec_source)
 
     def _navigate_to_feed(self, feed_id: str, xsec_token: str):
         """导航到笔记详情页并等待加载"""

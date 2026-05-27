@@ -30,3 +30,11 @@ data/search_result.json
 
 # Cookies (sensitive)
 cookies.json
+
+# Secrets
+.secret
+.env
+*.log
+
+# Testing
+.pytest_cache/

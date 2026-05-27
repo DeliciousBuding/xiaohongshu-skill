@@ -5,6 +5,7 @@
 """
 
 import json
+import re
 import sys
 import time
 from typing import Optional, Dict, Any
@@ -217,7 +218,6 @@ class UserProfileAction:
                     avatar.first.click()
                     time.sleep(2)
                     # 从跳转后的 URL 提取用户 ID
-                    import re
                     match = re.search(r'/user/profile/([a-f0-9]+)', page.url)
                     if match:
                         my_user_id = match.group(1)

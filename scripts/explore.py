@@ -47,7 +47,7 @@ class ExploreAction:
 
             // 提取每条笔记的关键信息
             return JSON.stringify(flat.map(function(item) {
-                var nc = item.noteCard || item.model_type === 'note' ? item : {};
+                var nc = item.noteCard || (item.model_type === 'note' ? item : {});
                 if (item.noteCard) nc = item.noteCard;
                 var info = nc.interactInfo || {};
                 var user = nc.user || {};

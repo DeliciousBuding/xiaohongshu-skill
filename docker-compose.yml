@@ -1,0 +1,33 @@
+# ============================================================
+# xiaohongshu-skill Docker Compose 配置
+# ============================================================
+# 启动：docker compose up
+# 首次使用需扫码登录：docker compose run --rm xiaohongshu qrcode
+# ============================================================
+
+services:
+  xiaohongshu:
+    build: .
+    image: xiaohongshu-skill:latest
+    container_name: xiaohongshu-skill
+
+    # 挂载 cookie 和浏览器数据到宿主机，确保持久化
+    volumes:
+      - ~/.xiaohongshu/:/root/.xiaohongshu/
+      - ./data/:/app/data/
+
+    # 环境变量
+    environment:
+      # 代理地址，留空则不使用代理
+      - XHS_PROXY=${XHS_PROXY:-}
+      # 无头模式，设为 false 则显示浏览器（需要 X11 转发或 VNC）
+      - XHS_HEADLESS=${XHS_HEADLESS:-true}
+
+    # 默认命令：检查登录状态
+    command: ["check-login"]
+
+    # 如需在容器内使用有头浏览器，可添加：
+    # environment:
+    #   - DISPLAY=${DISPLAY}
+    # volumes:
+    #   - /tmp/.X11-unix:/tmp/.X11-unix

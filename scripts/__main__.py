@@ -421,10 +421,9 @@ def cmd_sop(args):
         )
     elif args.sop_type == "comment":
         # comment SOP 需要 JSON 格式的回复列表
-        import json as _json
         try:
-            replies = _json.loads(args.replies) if args.replies else []
-        except _json.JSONDecodeError:
+            replies = json.loads(args.replies) if args.replies else []
+        except json.JSONDecodeError:
             print(format_output({"status": "error", "message": "replies 参数格式错误，需要 JSON 数组"}))
             return 1
         result = sop.run_comment_sop(replies=replies)

@@ -182,6 +182,7 @@ class StrategyManager:
 
         # 清理 7 天前的日志
         self._cleanup_old_logs()
+        self._save_config()
 
         limit_info = self.check_daily_limit(action_type)
         return {

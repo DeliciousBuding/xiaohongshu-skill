@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xiaohongshu-skill"
+version = "1.2.0"
+description = "小红书 AI Agent 工具箱 — 搜笔记、发帖子、做互动、跑运营"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "DeliciousBuding"},
+]
+keywords = ["xiaohongshu", "rednote", "小红书", "social-media", "automation", "agent-skill"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Browsers",
+]
+dependencies = [
+    "playwright>=1.40.0",
+    "markdown>=3.5",
+    "Pygments>=2.17",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-mock>=3.0",
+]
+
+[project.scripts]
+xiaohongshu-skill = "scripts.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/DeliciousBuding/xiaohongshu-skill"
+Issues = "https://github.com/DeliciousBuding/xiaohongshu-skill/issues"
+
+[tool.setuptools.packages.find]
+include = ["scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
