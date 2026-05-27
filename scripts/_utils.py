@@ -7,6 +7,24 @@
 from typing import Any
 
 
+def is_element_blocked(page, elem):
+    """检测元素是否被其他元素遮挡
+
+    Go 参考: publish.go:187-203 isElementBlocked
+    通过 JS getBoundingClientRect + elementFromPoint 判断元素中心点
+    是否被其他 DOM 节点遮挡。
+    """
+    result = elem.evaluate("""(el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return true;
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const target = document.elementFromPoint(x, y);
+        return !(target === el || el.contains(target));
+    }""")
+    return result
+
+
 def make_feed_url(feed_id: str, xsec_token: str, xsec_source: str = "pc_feed") -> str:
     """构建笔记详情 URL
 

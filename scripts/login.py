@@ -270,3 +270,21 @@ def login(
         }
     finally:
         client.close()
+
+
+def logout(cookie_path=None):
+    """删除浏览器持久化数据和 Cookie 文件，重置登录状态"""
+    import shutil
+    # 1. 删除持久化浏览器数据目录
+    user_data_dir = os.path.join(os.path.expanduser("~"), ".xiaohongshu", "browser-data")
+    if os.path.exists(user_data_dir):
+        shutil.rmtree(user_data_dir)
+    # 2. 删除 cookie JSON
+    path = cookie_path or DEFAULT_COOKIE_PATH
+    if os.path.exists(path):
+        os.remove(path)
+    # 3. 删除策略文件
+    strategy_file = os.path.join(os.path.expanduser("~"), ".xiaohongshu", "strategy.json")
+    if os.path.exists(strategy_file):
+        os.remove(strategy_file)
+    return {"status": "ok", "message": "登录状态已清除"}

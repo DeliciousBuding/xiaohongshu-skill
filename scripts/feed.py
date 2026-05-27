@@ -34,6 +34,45 @@ class FeedDetailAction:
         }""")
         time.sleep(0.5)
 
+    def _check_page_accessible(self):
+        """检查页面是否可访问（笔记是否被删/私密/违规）"""
+        page = self.client.page
+        keywords = [
+            "当前笔记暂时无法浏览", "该内容因违规已被删除", "该笔记已被删除",
+            "内容不存在", "笔记不存在", "已失效", "私密笔记", "仅作者可见",
+            "因用户设置你无法查看", "因违规无法查看"
+        ]
+        for kw in keywords:
+            if page.locator(f"text={kw}").count() > 0:
+                raise Exception(f"笔记不可访问: {kw}")
+        # Also check selectors
+        for sel in [".access-wrapper", ".error-wrapper", ".not-found-wrapper", ".blocked-wrapper"]:
+            if page.locator(sel).count() > 0:
+                raise Exception(f"笔记不可访问（检测到 {sel}）")
+
+    def _human_scroll(self, speed="normal", direction="down"):
+        """模拟人类滚动（从 Go feed_detail.go:469-517 移植）"""
+        page = self.client.page
+        viewport = page.evaluate("() => window.innerHeight")
+        ratios = {"slow": 0.5, "normal": 0.7, "fast": 0.9}
+        ratio = ratios.get(speed, 0.7)
+        jitter = random.randint(-50, 50)
+        delta = int(viewport * ratio * (0.7 + random.random() * 0.2)) + jitter
+        if direction == "up":
+            delta = -delta
+        page.evaluate(f"window.scrollBy({{top: {delta}, behavior: 'smooth'}})")
+
+    def _smart_scroll(self):
+        """smartScroll：调度 WheelEvent 到 .note-scroller（从 Go feed_detail.go:553-569 移植）"""
+        self.client.page.evaluate("""() => {
+            const scroller = document.querySelector('.note-scroller');
+            if (scroller) {
+                scroller.dispatchEvent(new WheelEvent('wheel', {
+                    deltaY: 200, deltaMode: 0, bubbles: true, cancelable: true
+                }));
+            }
+        }""")
+
     def _load_comments(self, max_items: int = 0):
         """
         加载评论（滚动 + 点击加载更多）
@@ -64,8 +103,10 @@ class FeedDetailAction:
             except Exception:
                 pass
 
-            # 滚动
-            page.evaluate("window.scrollBy(0, 300)")
+            # 滚动：先 smartScroll（WheelEvent），再 humanScroll
+            self._smart_scroll()
+            human_delay()
+            self._human_scroll()
             human_delay()
 
             # 获取当前评论数量
@@ -91,6 +132,9 @@ class FeedDetailAction:
     def _extract_feed_detail(self, feed_id: str) -> Optional[Dict[str, Any]]:
         """提取笔记详情数据"""
         page = self.client.page
+
+        # 检查页面是否可访问
+        self._check_page_accessible()
 
         # 传入 feed_id，只提取对应条目，避免序列化整个 Vue Reactive 代理
         result = page.evaluate("""(fid) => {

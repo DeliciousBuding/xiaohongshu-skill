@@ -10,12 +10,27 @@ import os
 import sys
 import time
 import random
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from ._utils import is_element_blocked
 
 PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
+
+
+@dataclass
+class PublishImageContent:
+    """发布图文内容数据类（对应 Go publish.go PublishImageContent struct）"""
+    title: str = ""
+    content: str = ""
+    image_paths: List[str] = field(default_factory=list)
+    tags: Optional[List[str]] = None
+    schedule_time: Optional[str] = None
+    is_original: bool = False       # 是否声明原创
+    visibility: str = "公开可见"     # 可见范围: 公开可见/仅自己可见/仅互关好友可见
+    video_path: Optional[str] = None  # 视频发布时使用
 
 
 class PublishAction:
@@ -31,7 +46,11 @@ class PublishAction:
         time.sleep(3)
 
     def _click_publish_tab(self, tab_name: str):
-        """点击发布类型 TAB（上传图文 / 上传视频）"""
+        """点击发布类型 TAB（上传图文 / 上传视频）
+
+        Go 参考: publish.go:119-153 mustClickPublishTab + getTabElement
+        增加遮挡检测（isElementBlocked），被遮挡时 removePopCover + clickEmptyPosition。
+        """
         page = self.client.page
 
         # 等待上传区域出现
@@ -48,20 +67,51 @@ class PublishAction:
             if (popover) popover.remove();
         }""")
 
-        # 查找并点击对应 TAB
-        try:
-            tabs = page.locator('div.creator-tab')
-            for i in range(tabs.count()):
-                tab = tabs.nth(i)
-                text = tab.text_content().strip()
-                if text == tab_name:
+        # 带遮挡检测和重试的 TAB 点击
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            try:
+                tabs = page.locator('div.creator-tab')
+                for i in range(tabs.count()):
+                    tab = tabs.nth(i)
+                    text = tab.text_content().strip()
+                    if text != tab_name:
+                        continue
+
+                    # 检测遮挡
+                    try:
+                        blocked = is_element_blocked(page, tab)
+                    except Exception:
+                        blocked = False
+
+                    if blocked:
+                        print("发布 TAB 被遮挡，移除弹窗后重试", file=sys.stderr)
+                        # removePopCover: 移除弹窗
+                        page.evaluate("""() => {
+                            var popover = document.querySelector('div.d-popover');
+                            if (popover) popover.remove();
+                        }""")
+                        # clickEmptyPosition: 点击空位置消除焦点
+                        x = 380 + random.randint(0, 100)
+                        y = 20 + random.randint(0, 60)
+                        page.mouse.click(x, y)
+                        time.sleep(0.3)
+                        break  # 重新扫描
+
                     tab.click()
                     time.sleep(1)
                     print(f"已切换到「{tab_name}」", file=sys.stderr)
                     return
-            # 回退：使用文本定位
+            except Exception as e:
+                print(f"查找 TAB 出错: {e}", file=sys.stderr)
+
+            time.sleep(0.2)
+
+        # 回退：使用文本定位
+        try:
             page.get_by_text(tab_name, exact=True).click()
             time.sleep(1)
+            print(f"已切换到「{tab_name}」(回退)", file=sys.stderr)
         except Exception as e:
             print(f"切换 TAB「{tab_name}」失败: {e}", file=sys.stderr)
 
@@ -258,6 +308,149 @@ class PublishAction:
             except Exception as e:
                 print(f"输入标签「{tag}」失败: {e}", file=sys.stderr)
 
+    def _set_visibility(self, page, visibility: str):
+        """设置可见范围
+
+        Go 参考: publish.go:792-836 setVisibility
+        支持: "公开可见"(默认), "仅自己可见", "仅互关好友可见"
+        """
+        if not visibility or visibility == "公开可见":
+            print("可见范围使用默认：公开可见", file=sys.stderr)
+            return
+
+        supported = {"仅自己可见", "仅互关好友可见"}
+        if visibility not in supported:
+            raise ValueError(
+                f"不支持的可见范围: {visibility}，支持: 公开可见、仅自己可见、仅互关好友可见"
+            )
+
+        # 点击可见范围下拉框
+        dropdown = page.locator("div.permission-card-wrapper div.d-select-content")
+        dropdown.click()
+        time.sleep(0.5)
+
+        # 在下拉选项中查找并点击目标
+        opts = page.locator("div.d-options-wrapper div.d-grid-item div.custom-option")
+        for i in range(opts.count()):
+            opt = opts.nth(i)
+            text = opt.text_content()
+            if visibility in text:
+                opt.click()
+                print(f"已设置可见范围: {visibility}", file=sys.stderr)
+                time.sleep(0.2)
+                return
+
+        raise ValueError(f"未找到可见范围选项: {visibility}")
+
+    def _confirm_original_declaration(self, page):
+        """处理原创声明确认弹窗
+
+        Go 参考: publish.go:952-1034 confirmOriginalDeclaration
+        使用 JS 查找 footer 中的 checkbox 和声明原创按钮。
+        """
+        time.sleep(0.8)
+
+        # 查找弹窗 footer 并勾选 checkbox
+        result = page.evaluate("""
+            () => {
+                const footers = document.querySelectorAll('div.footer');
+                for (const footer of footers) {
+                    if (!footer.textContent.includes('原创声明须知')) {
+                        continue;
+                    }
+                    const checkbox = footer.querySelector('div.d-checkbox input[type="checkbox"]');
+                    if (checkbox && !checkbox.checked) {
+                        checkbox.click();
+                        console.log('已勾选原创声明须知 checkbox');
+                    }
+                    return 'found_footer';
+                }
+                return 'footer_not_found';
+            }
+        """)
+        if result == "footer_not_found":
+            print("警告: 未找到原创声明确认弹窗的 footer", file=sys.stderr)
+
+        time.sleep(0.5)
+
+        # 点击「声明原创」按钮
+        result2 = page.evaluate("""
+            () => {
+                const footers = document.querySelectorAll('div.footer');
+                for (const footer of footers) {
+                    if (!footer.textContent.includes('声明原创')) {
+                        continue;
+                    }
+                    const btn = footer.querySelector('button.custom-button');
+                    if (btn) {
+                        if (btn.classList.contains('disabled') || btn.disabled) {
+                            const checkbox = footer.querySelector('div.d-checkbox input[type="checkbox"]');
+                            if (checkbox && !checkbox.checked) {
+                                checkbox.click();
+                            }
+                            return 'button_disabled';
+                        }
+                        btn.click();
+                        return 'clicked';
+                    }
+                }
+                return 'button_not_found';
+            }
+        """)
+
+        status = result2
+        print(f"原创声明确认结果: {status}", file=sys.stderr)
+
+        if status == "button_not_found":
+            print("警告: 未找到声明原创按钮", file=sys.stderr)
+        elif status == "button_disabled":
+            print("警告: 声明原创按钮仍处于禁用状态", file=sys.stderr)
+        else:
+            print("已成功点击声明原创按钮", file=sys.stderr)
+
+        time.sleep(0.3)
+
+    def _set_original(self, page):
+        """设置原创声明
+
+        Go 参考: publish.go:889-949 setOriginal
+        在 div.custom-switch-card 中查找包含"原创声明"文本的卡片，
+        检查 d-switch 开关状态，未勾选则点击并处理确认弹窗。
+        """
+        # 查找包含"原创声明"文本的 custom-switch-card
+        switch_cards = page.locator("div.custom-switch-card")
+        for i in range(switch_cards.count()):
+            card = switch_cards.nth(i)
+            text = card.text_content()
+
+            if "原创声明" not in text:
+                continue
+
+            # 找到其中 d-switch
+            switch_elem = card.locator("div.d-switch")
+            if switch_elem.count() == 0:
+                continue
+
+            # 检查是否已勾选
+            checked = switch_elem.evaluate("""(el) => {
+                const input = el.querySelector('input[type="checkbox"]');
+                return input ? input.checked : false;
+            }""")
+            if checked:
+                print("原创声明已开启，跳过", file=sys.stderr)
+                return
+
+            # 点击开关
+            switch_elem.click()
+            time.sleep(0.5)
+
+            # 处理确认弹窗
+            self._confirm_original_declaration(page)
+            print("已开启原创声明", file=sys.stderr)
+            return
+
+        print("提示: 未找到原创声明选项（可能账号不支持）", file=sys.stderr)
+
     def _set_schedule(self, schedule_time: str):
         """设置定时发布（格式: 2025-01-01 12:00）"""
         page = self.client.page
@@ -278,14 +471,62 @@ class PublishAction:
             print(f"设置定时发布失败: {e}", file=sys.stderr)
 
     def _click_publish_button(self) -> bool:
-        """点击发布按钮"""
+        """点击发布按钮
+
+        Go 参考: publish.go:401-463 findPublishButton + publish.go:465-508 clickPublishWidget
+        优先检测新版 xhs-publish-btn Web Component，回退到旧版 button.bg-red。
+        新版 widget 通过 bounding_box 坐标 + mouse.click 点击。
+        """
         page = self.client.page
+
+        # 1. 优先检测新版 xhs-publish-btn Web Component
+        try:
+            widgets = page.locator("xhs-publish-btn")
+            for i in range(widgets.count()):
+                widget = widgets.nth(i)
+
+                # 检查 is-publish 属性
+                is_publish = widget.get_attribute("is-publish")
+                if is_publish == "false":
+                    continue
+
+                # 检查 submit-disabled 属性
+                submit_disabled = widget.get_attribute("submit-disabled")
+                if submit_disabled == "true":
+                    print("新版发布按钮不可点击 (submit-disabled=true)", file=sys.stderr)
+                    time.sleep(1)
+                    continue
+
+                # 通过坐标点击 widget
+                widget.scroll_into_view_if_needed()
+                time.sleep(0.2)
+
+                box = widget.bounding_box()
+                if box:
+                    # 点击位置: x 在 65% 宽处, y 在中间
+                    x = box['x'] + box['width'] * 0.65
+                    y = box['y'] + box['height'] / 2
+                    page.mouse.click(x, y)
+                    time.sleep(3)
+                    print("已点击新版发布按钮 (xhs-publish-btn)", file=sys.stderr)
+                    return True
+                else:
+                    print("新版发布按钮无 bounding box", file=sys.stderr)
+
+            # 如果找到了新版 widget 但都无法点击，视为已处理
+            if widgets.count() > 0:
+                print("所有新版发布按钮均不可用", file=sys.stderr)
+                return False
+        except Exception as e:
+            print(f"检测新版发布按钮出错: {e}", file=sys.stderr)
+
+        # 2. 回退到旧版 button.bg-red
         try:
             btn = page.locator('.publish-page-publish-btn button.bg-red')
             if btn.count() > 0:
                 btn.first.click()
                 time.sleep(3)
-                print("已点击发布按钮", file=sys.stderr)
+                print("已点击发布按钮 (旧版)", file=sys.stderr)
                 return True
             else:
                 print("未找到发布按钮", file=sys.stderr)
@@ -324,6 +565,8 @@ class PublishAction:
         tags: Optional[List[str]] = None,
         schedule_time: Optional[str] = None,
         auto_publish: bool = False,
+        is_original: bool = False,
+        visibility: str = "公开可见",
     ) -> Dict[str, Any]:
         """
         发布图文笔记
@@ -335,6 +578,8 @@ class PublishAction:
             tags: 话题标签列表
             schedule_time: 定时发布时间（格式 2025-01-01 12:00），None 为立即
             auto_publish: 是否自动点击发布（默认 False，停在发布按钮处）
+            is_original: 是否声明原创（默认 False）
+            visibility: 可见范围，公开可见/仅自己可见/仅互关好友可见
 
         Returns:
             操作结果
@@ -359,16 +604,25 @@ class PublishAction:
             self._input_tags(tags)
             time.sleep(random.uniform(1.0, 2.0))
 
-        # 5. 定时发布
+        # 5. 设置可见范围
+        self._set_visibility(self.client.page, visibility)
+        time.sleep(random.uniform(0.5, 1.0))
+
+        # 6. 原创声明
+        if is_original:
+            self._set_original(self.client.page)
+            time.sleep(random.uniform(0.5, 1.0))
+
+        # 7. 定时发布
         if schedule_time:
             self._set_schedule(schedule_time)
             time.sleep(random.uniform(0.5, 1.5))
 
-        # 6. 校验三要素
+        # 8. 校验三要素
         ready = self._check_publish_ready()
         print(f"发布前校验: {ready}", file=sys.stderr)
 
-        # 7. 是否自动发布
+        # 9. 是否自动发布
         if auto_publish:
             success = self._click_publish_button()
             return {
@@ -378,6 +632,8 @@ class PublishAction:
                 "image_count": len(image_paths),
                 "tags": tags or [],
                 "schedule_time": schedule_time,
+                "is_original": is_original,
+                "visibility": visibility,
                 "published": success,
                 "message": "发布成功" if success else "发布失败",
             }
@@ -389,6 +645,8 @@ class PublishAction:
                 "image_count": len(image_paths),
                 "tags": tags or [],
                 "schedule_time": schedule_time,
+                "is_original": is_original,
+                "visibility": visibility,
                 "published": False,
                 "ready_check": ready,
                 "message": "已填写完毕，停在发布按钮处。请确认后使用 --auto-publish 发布。",
@@ -402,6 +660,8 @@ class PublishAction:
         tags: Optional[List[str]] = None,
         schedule_time: Optional[str] = None,
         auto_publish: bool = False,
+        is_original: bool = False,
+        visibility: str = "公开可见",
     ) -> Dict[str, Any]:
         """
         发布视频笔记
@@ -413,6 +673,8 @@ class PublishAction:
             tags: 话题标签
             schedule_time: 定时发布时间
             auto_publish: 是否自动发布（默认 False）
+            is_original: 是否声明原创（默认 False）
+            visibility: 可见范围，公开可见/仅自己可见/仅互关好友可见
 
         Returns:
             操作结果
@@ -437,12 +699,21 @@ class PublishAction:
             self._input_tags(tags)
             time.sleep(random.uniform(1.0, 2.0))
 
-        # 5. 定时发布
+        # 5. 设置可见范围
+        self._set_visibility(self.client.page, visibility)
+        time.sleep(random.uniform(0.5, 1.0))
+
+        # 6. 原创声明
+        if is_original:
+            self._set_original(self.client.page)
+            time.sleep(random.uniform(0.5, 1.0))
+
+        # 7. 定时发布
         if schedule_time:
             self._set_schedule(schedule_time)
             time.sleep(random.uniform(0.5, 1.5))
 
-        # 6. 校验
+        # 8. 校验
         ready = self._check_publish_ready()
         print(f"发布前校验: {ready}", file=sys.stderr)
 
@@ -453,6 +724,8 @@ class PublishAction:
                 "action": "publish_video",
                 "title": title,
                 "video_path": video_path,
+                "is_original": is_original,
+                "visibility": visibility,
                 "published": success,
                 "message": "发布成功" if success else "发布失败",
             }
@@ -462,6 +735,8 @@ class PublishAction:
                 "action": "publish_video",
                 "title": title,
                 "video_path": video_path,
+                "is_original": is_original,
+                "visibility": visibility,
                 "published": False,
                 "ready_check": ready,
                 "message": "已填写完毕，停在发布按钮处。请确认后使用 --auto-publish 发布。",
@@ -744,6 +1019,8 @@ def publish_image(
     tags: Optional[List[str]] = None,
     schedule_time: Optional[str] = None,
     auto_publish: bool = False,
+    is_original: bool = False,
+    visibility: str = "公开可见",
     headless: bool = True,
     cookie_path: str = DEFAULT_COOKIE_PATH,
 ) -> Dict[str, Any]:
@@ -755,6 +1032,7 @@ def publish_image(
         return action.publish_image(
             title=title, content=content, image_paths=image_paths,
             tags=tags, schedule_time=schedule_time, auto_publish=auto_publish,
+            is_original=is_original, visibility=visibility,
         )
     finally:
         client.close()
@@ -767,6 +1045,8 @@ def publish_video(
     tags: Optional[List[str]] = None,
     schedule_time: Optional[str] = None,
     auto_publish: bool = False,
+    is_original: bool = False,
+    visibility: str = "公开可见",
     headless: bool = True,
     cookie_path: str = DEFAULT_COOKIE_PATH,
 ) -> Dict[str, Any]:
@@ -778,6 +1058,7 @@ def publish_video(
         return action.publish_video(
             title=title, content=content, video_path=video_path,
             tags=tags, schedule_time=schedule_time, auto_publish=auto_publish,
+            is_original=is_original, visibility=visibility,
         )
     finally:
         client.close()

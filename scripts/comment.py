@@ -111,6 +111,83 @@ class CommentAction:
             pass
         return True  # 获取失败时不阻断流程
 
+    def _find_comment_with_scroll(self, comment_id: str, reply_user_id: str, max_attempts: int = 100):
+        """滚动查找目标评论元素（支持懒加载，从 Go comment_feed.go:157-273 移植）
+
+        优先匹配 #comment-{comment_id}，然后扫描 [data-user-id="{user_id}"]。
+        最多 100 次滚动尝试，10 次未增长则检测 end-container 终止。
+        """
+        page = self.client.page
+        stagnant = 0
+        last_comment_count = 0
+
+        for attempt in range(max_attempts):
+            # Priority 1: check for #comment-{comment_id}
+            try:
+                el = page.locator(f'#comment-{comment_id}')
+                if el.count() > 0:
+                    el.first.scroll_into_view_if_needed()
+                    time.sleep(0.3)
+                    el.first.hover()
+                    print(f"通过 #comment-{comment_id} 定位到评论（第 {attempt + 1} 次尝试）", file=sys.stderr)
+                    return el.first
+            except Exception:
+                pass
+
+            # Priority 2: scan [data-user-id="{user_id}"]
+            try:
+                user_comments = page.locator(f'[data-user-id="{reply_user_id}"]')
+                if user_comments.count() > 0:
+                    for i in range(min(user_comments.count(), 20)):  # 限制单次扫描数量
+                        try:
+                            el = user_comments.nth(i)
+                            el_id = el.get_attribute('id') or ''
+                            el_data_cid = el.get_attribute('data-comment-id') or ''
+                            if comment_id in el_id or comment_id in el_data_cid:
+                                el.scroll_into_view_if_needed()
+                                time.sleep(0.3)
+                                el.hover()
+                                print(f"通过 data-user-id 定位到评论（第 {attempt + 1} 次尝试）", file=sys.stderr)
+                                return el
+                        except Exception:
+                            continue
+            except Exception:
+                pass
+
+            # Scroll to trigger lazy-load of more comments
+            page.evaluate("""() => {
+                const scroller = document.querySelector('.note-scroller') ||
+                                  document.querySelector('.comments-wrap');
+                if (scroller) scroller.scrollTop += 500;
+            }""")
+            time.sleep(0.3)
+
+            # Check comment count for growth (stagnation detection)
+            try:
+                comments = page.locator('.comment-item')
+                current_count = comments.count()
+            except Exception:
+                current_count = 0
+
+            if current_count == last_comment_count:
+                stagnant += 1
+            else:
+                stagnant = 0
+            last_comment_count = current_count
+
+            if stagnant >= 10:
+                # Check end-container to confirm no more items
+                if page.locator('.end-container').count() > 0:
+                    print("检测到 end-container，停止滚动查找", file=sys.stderr)
+                    break
+                # Safety: break after extended stagnation even without end-container
+                if stagnant >= 15:
+                    print("评论列表长时间无增长，停止滚动查找", file=sys.stderr)
+                    break
+
+        print(f"未找到评论 {comment_id}（已滚动 {max_attempts} 次）", file=sys.stderr)
+        return None
+
     def _type_and_submit(self, content: str, max_retries: int = 1) -> bool:
         """在评论输入框中输入文字并提交（整合 ops 人性化延迟 + 失败重试）"""
         for attempt in range(max_retries + 1):
@@ -269,26 +346,18 @@ class CommentAction:
         }""")
         time.sleep(1)
 
-        # 找到目标评论并点击"回复"按钮
+        # 滚动查找目标评论（支持懒加载，从 Go comment_feed.go:157-273 移植）
+        comment_el = self._find_comment_with_scroll(comment_id, reply_user_id)
+
         try:
-            # 尝试通过评论 ID 定位
-            comment_el = page.locator(f'[data-comment-id="{comment_id}"]')
-            if comment_el.count() == 0:
-                # 回退：通过遍历评论列表查找
-                comment_el = page.locator('.comment-item').filter(has_text=comment_id)
-
-            if comment_el.count() > 0:
-                # 悬停以显示回复按钮
-                comment_el.first.hover()
-                time.sleep(0.3)
-
+            if comment_el is not None:
                 # 点击回复按钮
-                reply_btn = comment_el.first.locator('.reply-btn, button:has-text("回复"), span:has-text("回复")')
+                reply_btn = comment_el.locator('.reply-btn, button:has-text("回复"), span:has-text("回复")')
                 if reply_btn.count() > 0:
                     reply_btn.first.click()
                     time.sleep(0.5)
                     # 验证输入框 placeholder（ops 技巧）
-                    self._verify_input_placeholder(f"回复")
+                    self._verify_input_placeholder("回复")
                 else:
                     print("未找到回复按钮，尝试直接在评论框回复", file=sys.stderr)
             else:

@@ -7,6 +7,7 @@
 
 import argparse
 import json
+import logging
 import sys
 from typing import Optional
 
@@ -14,6 +15,8 @@ from typing import Optional
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
+from . import __version__
+from ._logging import get_logger
 from .client import XiaohongshuClient, CaptchaError, DEFAULT_COOKIE_PATH
 from . import login
 from . import search
@@ -126,6 +129,13 @@ def cmd_check_login(args):
         "is_logged_in": is_logged_in,
         "username": username,
     }))
+    return 0
+
+
+def cmd_logout(args):
+    """删除登录状态"""
+    result = login.logout(cookie_path=args.cookie or DEFAULT_COOKIE_PATH)
+    print(format_output(result))
     return 0
 
 
@@ -453,6 +463,9 @@ def main():
     )
 
     # 全局参数
+    parser.add_argument("--version", "-V", action="version", version=f"xiaohongshu-skill {__version__}")
+    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--quiet", "-q", action="store_true", help="仅输出 JSON 结果")
     parser.add_argument("--cookie", "-c", help="Cookie 文件路径", default=None)
     parser.add_argument("--headless", help="无头模式: true/false（默认 true）", default='true')
 
@@ -473,6 +486,10 @@ def main():
     chk_p = subparsers.add_parser("check-login", help="检查登录状态")
     chk_p.add_argument("--headless", default='true')
     chk_p.set_defaults(func=cmd_check_login)
+
+    # logout
+    logout_p = subparsers.add_parser("logout", help="删除登录状态（Cookie 和浏览器数据）")
+    logout_p.set_defaults(func=cmd_logout)
 
     # search
     s_p = subparsers.add_parser("search", help="搜索内容")
@@ -654,6 +671,13 @@ def main():
     sop_p.set_defaults(func=cmd_sop)
 
     args = parser.parse_args()
+
+    # 根据 --verbose / --quiet 设置日志级别
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    elif args.quiet:
+        logging.getLogger().setLevel(logging.ERROR)
+
     if not args.command:
         parser.print_help()
         return 0

@@ -12,7 +12,10 @@ import time
 from pathlib import Path
 from typing import Optional, Any, Dict
 
+from ._logging import get_logger
 from ._utils import unwrap_value
+
+log = get_logger(__name__)
 
 try:
     from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page, Playwright
@@ -61,6 +64,9 @@ class XiaohongshuClient:
     BURST_THRESHOLD = 5      # 连续请求阈值，超过后增加额外冷却
     BURST_COOLDOWN = 10.0    # 连续请求冷却时间（秒）
 
+    # 外部 stealth.js 覆盖路径（用户可选）
+    STEALTH_JS_PATH = os.path.join(os.path.expanduser("~"), ".xiaohongshu", "stealth.js")
+
     def __init__(
         self,
         headless: bool = True,
@@ -83,12 +89,29 @@ class XiaohongshuClient:
         self._navigate_count: int = 0
         self._session_start: float = 0.0
 
+        # 加载 stealth JS（内置 + 可选外部覆盖）
+        self._stealth_js = self._load_stealth_js()
+
     def __enter__(self):
         self.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def _load_stealth_js(self) -> str:
+        """加载 stealth JS：内置脚本 + 可选外部覆盖文件"""
+        js = self.STEALTH_JS
+        if os.path.exists(self.STEALTH_JS_PATH):
+            try:
+                with open(self.STEALTH_JS_PATH, 'r', encoding='utf-8') as f:
+                    external = f.read()
+                if external.strip():
+                    js += "\n// === 外部 stealth.js 覆盖 ===\n" + external
+                    log.info("已加载外部 stealth.js: %s", self.STEALTH_JS_PATH)
+            except Exception as e:
+                log.warning("加载外部 stealth.js 失败: %s", e)
+        return js
 
     # 反检测隐身脚本：覆盖 headless Chromium 的自动化特征
     STEALTH_JS = """
@@ -143,7 +166,48 @@ class XiaohongshuClient:
     };
 
     // 7. 隐藏自动化相关的 CDP 痕迹
-    // 防止通过 Error.stack 检测 puppeteer/playwright 注入
+    // 移除 Error.stack 中的 CDP Runtime.enable 调用痕迹
+    const origStackGetter = Object.getOwnPropertyDescriptor(Error.prototype, 'stack').get;
+    Object.defineProperty(Error.prototype, 'stack', {
+        get: function() {
+            const stack = origStackGetter.call(this);
+            if (stack && typeof stack === 'string') {
+                return stack.split('\\n').filter(line =>
+                    !line.includes('__puppeteer_') &&
+                    !line.includes('__playwright_') &&
+                    !line.includes('callFunctionOn') &&
+                    !line.includes('evaluateOnCallFrame')
+                ).join('\\n');
+            }
+            return stack;
+        }
+    });
+
+    // 8. Canvas 指纹随机化
+    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function(type) {
+        const ctx = this.getContext('2d');
+        if (ctx) {
+            const imageData = ctx.getImageData(0, 0, 1, 1);
+            imageData.data[0] = imageData.data[0] ^ (Math.random() * 2 | 0);
+            ctx.putImageData(imageData, 0, 0);
+        }
+        return origToDataURL.apply(this, arguments);
+    };
+    const origToBlob = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
+        const origCtx = this.getContext('2d');
+        if (origCtx) {
+            const id = origCtx.getImageData(0, 0, 1, 1);
+            id.data[0] = id.data[0] ^ (Math.random() * 2 | 0);
+            origCtx.putImageData(id, 0, 0);
+        }
+        return origToBlob.apply(this, arguments);
+    };
+
+    // 9. 修复 headless 模式下的 outerWidth/outerHeight
+    Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth });
+    Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight + 100 });
     """
 
     def start(self):
@@ -156,7 +220,7 @@ class XiaohongshuClient:
             user_data_dir=self.user_data_dir,
             headless=self.headless,
             viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             locale='zh-CN',
             timezone_id='Asia/Shanghai',
             args=[
@@ -172,12 +236,12 @@ class XiaohongshuClient:
         self.browser = None  # persistent context 无需单独的 browser 对象
 
         # 注入反检测隐身脚本（在每个新页面加载前执行）
-        self.context.add_init_script(self.STEALTH_JS)
+        self.context.add_init_script(self._stealth_js)
 
         # 如果持久化目录是新的但有旧 cookie 备份文件，迁移恢复
         if not self.context.cookies() and os.path.exists(self.cookie_path):
             self._load_cookies()
-            print("已从备份文件迁移 Cookie 到持久化上下文", file=sys.stderr)
+            log.info("已从备份文件迁移 Cookie 到持久化上下文")
 
         # 复用持久化上下文的已有页面，或创建新页面
         if self.context.pages:
@@ -209,9 +273,9 @@ class XiaohongshuClient:
                 cookies = json.load(f)
             if cookies:
                 self.context.add_cookies(cookies)
-                print(f"已加载 {len(cookies)} 个 Cookie", file=sys.stderr)
+                log.info("已加载 %d 个 Cookie", len(cookies))
         except Exception as e:
-            print(f"加载 Cookie 失败: {e}", file=sys.stderr)
+            log.warning("加载 Cookie 失败: %s", e)
 
     def _save_cookies(self):
         """保存 Cookie 到文件"""
@@ -223,9 +287,9 @@ class XiaohongshuClient:
             os.makedirs(os.path.dirname(self.cookie_path), exist_ok=True)
             with open(self.cookie_path, 'w', encoding='utf-8') as f:
                 json.dump(cookies, f, ensure_ascii=False, indent=2)
-            print(f"已保存 {len(cookies)} 个 Cookie 到 {self.cookie_path}", file=sys.stderr)
+            log.info("已保存 %d 个 Cookie 到 %s", len(cookies), self.cookie_path)
         except Exception as e:
-            print(f"保存 Cookie 失败: {e}", file=sys.stderr)
+            log.warning("保存 Cookie 失败: %s", e)
 
     def _throttle(self):
         """请求频率控制：模拟人类浏览节奏"""
@@ -243,7 +307,7 @@ class XiaohongshuClient:
             cooldown = self.BURST_COOLDOWN + random.uniform(0, 3)
             if elapsed < cooldown:
                 wait = cooldown - elapsed
-                print(f"反爬保护: 连续请求 {self._navigate_count} 次，冷却 {wait:.1f}s...", file=sys.stderr)
+                log.debug("反爬保护: 连续请求 %d 次，冷却 %.1fs...", self._navigate_count, wait)
                 time.sleep(wait)
         elif elapsed < self.MIN_INTERVAL:
             # 普通间隔控制
@@ -337,14 +401,14 @@ class XiaohongshuClient:
                 return
             except Exception:
                 if attempt < retries:
-                    print(f"__INITIAL_STATE__ 等待超时，刷新重试 ({attempt + 1}/{retries})...", file=sys.stderr)
+                    log.warning("__INITIAL_STATE__ 等待超时，刷新重试 (%d/%d)...", attempt + 1, retries)
                     self.page.reload(wait_until="domcontentloaded")
                     time.sleep(random.uniform(2, 4))
                     # 刷新后再检测验证码
                     if self._check_captcha():
                         self._handle_captcha()
                 else:
-                    print("警告: __INITIAL_STATE__ 加载超时，尝试继续执行", file=sys.stderr)
+                    log.warning("__INITIAL_STATE__ 加载超时，尝试继续执行")
 
     def get_initial_state(self) -> Dict[str, Any]:
         """获取 __INITIAL_STATE__ 数据"""

@@ -40,6 +40,7 @@ class TestClickPublishTab:
         mock_tab = MagicMock()
         mock_tab.count.return_value = 1
         mock_tab.text_content.return_value = "上传图文"
+        mock_tab.evaluate.return_value = False  # is_element_blocked 返回 False
         mock_tabs = MagicMock()
         mock_tabs.count.return_value = 1
         mock_tabs.nth.return_value = mock_tab
@@ -54,6 +55,7 @@ class TestClickPublishTab:
         mock_tab = MagicMock()
         mock_tab.count.return_value = 1
         mock_tab.text_content.return_value = "上传视频"
+        mock_tab.evaluate.return_value = False  # is_element_blocked 返回 False
         mock_tabs = MagicMock()
         mock_tabs.count.return_value = 1
         mock_tabs.nth.return_value = mock_tab
@@ -346,7 +348,13 @@ class TestClickPublishButton:
         mock_btn = MagicMock()
         mock_btn.count.return_value = 1
         mock_btn.first = MagicMock()
-        self.client.page.locator.return_value = mock_btn
+
+        # xhs-publish-btn 不存在（count=0），回退到旧版按钮
+        mock_empty = MagicMock()
+        mock_empty.count.return_value = 0
+
+        self.client.page.locator = MagicMock()
+        self.client.page.locator.side_effect = lambda sel: mock_empty if "xhs-publish-btn" in sel else mock_btn
 
         result = self.action._click_publish_button()
         assert result is True
