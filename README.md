@@ -3,8 +3,9 @@
 小红书 AI Agent 工具箱。搜笔记、发帖子、做互动、跑运营，一条命令全搞定。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml)
 [![Stars](https://img.shields.io/github/stars/DeliciousBuding/xiaohongshu-skill?style=social)](https://github.com/DeliciousBuding/xiaohongshu-skill)
-[![Version](https://img.shields.io/badge/version-v1.2.0-blue)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
+[![Version](https://img.shields.io/badge/version-v1.3.0-blue)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![ClawHub](https://img.shields.io/badge/ClawHub-download-orange)](https://clawhub.com)
 

@@ -269,7 +269,7 @@ const data = obj.value !== undefined ? obj.value : obj._value;
 ├── LICENSE               # MIT
 ├── data/                 # 运行时数据（二维码、调试输出）
 ├── scripts/              # 核心模块
-│   ├── __init__.py       # 模块导出（v1.2.0）
+│   ├── __init__.py       # 模块导出（v1.3.0）
 │   ├── __main__.py       # CLI 入口（22+ 子命令）
 │   ├── client.py         # 浏览器客户端（频率控制 + 验证码检测）
 │   ├── login.py          # 二维码登录流程

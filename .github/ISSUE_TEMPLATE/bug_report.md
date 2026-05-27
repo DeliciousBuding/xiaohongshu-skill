@@ -25,7 +25,7 @@ assignees: DeliciousBuding
 - OS: [Windows 11 / WSL2 / Linux / macOS]
 - Python 版本: [3.10 / 3.11 / 3.12]
 - Playwright 版本: [1.40 / 1.41 / ...]
-- xiaohongshu-skill 版本: [1.2.0]
+- xiaohongshu-skill 版本: [1.3.0]
 
 ## 错误日志
 
