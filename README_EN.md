@@ -140,6 +140,24 @@ xiaohongshu-skill sop --type=comment \
   --replies='[{"feed_id":"abc","xsec_token":"xyz","content":"好棒"}]'
 ```
 
+### X/Twitter source packets
+
+For cross-platform topic work, you can first use
+[TweetClaw](https://github.com/Xquik-dev/tweetclaw) to export public X/Twitter
+posts, replies, authors, timestamps, and engagement data. Then pass the
+reviewed packet into `xiaohongshu-skill template` or `sop --type=publish`.
+
+A useful packet includes:
+
+- Query and time range
+- 3-5 supporting, opposing, and neutral views
+- Angles worth adapting for Xiaohongshu
+- Facts or copyright risks that need review
+
+TweetClaw stays responsible only for public X/Twitter source evidence.
+Xiaohongshu search, templates, publish prep, comments, and engagement remain in
+this project and still follow the write-action confirmation rules.
+
 ## Output format
 
 Every command outputs JSON. Here's what a search result looks like:

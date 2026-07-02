@@ -206,6 +206,22 @@ python -m scripts sop --type=explore --feed-count=10 --like-prob=0.3 --collect-p
 python -m scripts sop --type=comment --replies='[{"feed_id":"abc","xsec_token":"xyz","content":"好棒"}]'
 ```
 
+## X/Twitter 外部素材包
+
+需要做跨平台选题时，可以先用 TweetClaw 或同类 OpenClaw 工具导出公开
+X/Twitter 帖子、回复、作者、时间和互动数据，再把整理后的素材包交给
+`template` 或 `sop --type=publish`。
+
+素材包至少包含：
+
+- 查询词和时间范围
+- 支持、反对、中性观点各 3-5 条
+- 适合小红书改写的角度
+- 需要复核的事实或版权风险
+
+TweetClaw 只作为公开 X/Twitter 来源证据工具。小红书搜索、模板、发布准备、
+评论和互动仍由本 Skill 执行，并继续遵守写操作确认规则。
+
 ## 数据提取路径
 
 | 数据类型 | JavaScript 路径 |

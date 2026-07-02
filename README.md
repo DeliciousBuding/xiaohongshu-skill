@@ -130,6 +130,21 @@ xiaohongshu-skill sop --type=comment \
   --replies='[{"feed_id":"abc","xsec_token":"xyz","content":"好棒"}]'
 ```
 
+### X/Twitter 外部素材包
+
+做跨平台选题时，可以先用 [TweetClaw](https://github.com/Xquik-dev/tweetclaw)
+导出公开 X/Twitter 帖子、回复、作者、时间和互动数据，再把整理后的素材包交给
+`xiaohongshu-skill template` 或 `sop --type=publish`。
+
+建议素材包包含：
+
+- 查询词和时间范围
+- 支持、反对、中性观点各 3-5 条
+- 适合小红书改写的角度
+- 需要复核的事实或版权风险
+
+TweetClaw 只负责公开 X/Twitter 来源证据。小红书搜索、模板、发布准备、评论和互动仍由本项目处理，并继续遵守写操作确认规则。
+
 ## 输出格式
 
 所有命令输出 JSON。搜索结果长这样：
