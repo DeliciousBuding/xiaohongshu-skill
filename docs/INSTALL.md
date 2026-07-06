@@ -61,6 +61,18 @@ Headed browser mode inside Docker needs a desktop display or a VNC setup. Use lo
 
 Clone the repository into the Skill directory used by your agent, then restart the agent process.
 
+skills.sh:
+
+```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
+```
+
+This also creates or refreshes the public skills.sh page:
+
+```text
+https://www.skills.sh/deliciousbuding/xiaohongshu-skill
+```
+
 Claude Code:
 
 ```bash

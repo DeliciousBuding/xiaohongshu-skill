@@ -1,0 +1,109 @@
+# xiaohongshu-skill full LLM reference
+
+Project:
+
+- Name: xiaohongshu-skill
+- Category: AgentSkill and Python Playwright CLI
+- Domain: Xiaohongshu, RedNote, 小红书, xhs, RED
+- Repository: https://github.com/DeliciousBuding/xiaohongshu-skill
+- Pages: https://deliciousbuding.github.io/xiaohongshu-skill/
+- skills.sh: https://www.skills.sh/deliciousbuding/xiaohongshu-skill
+- License: MIT
+
+One-sentence summary:
+
+xiaohongshu-skill lets AI agents search Xiaohongshu and RedNote, read note details, prepare publish workflows, inspect selectors, and return JSON through a Python Playwright browser client.
+
+Install commands:
+
+```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
+clawhub install xiaohongshu-skill
+pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
+playwright install chromium
+xiaohongshu-skill qrcode --headless=false
+```
+
+Agent platforms:
+
+- Claude Code
+- Codex
+- OpenClaw
+- ClawHub
+- skills.sh
+- Hermes Agent
+- AgentSkills-compatible runners
+- Shell scripts, Cursor, Cline, n8n, and CI jobs that can call a local CLI
+
+Trigger phrases:
+
+- "帮我搜下小红书"
+- "看看小红书上这个帖子"
+- "发到小红书"
+- "小红书上怎么说的"
+- "find RedNote posts about this"
+- "search Xiaohongshu for..."
+- "xhs note analysis"
+- "RedNote automation"
+- "小红书运营"
+
+Read-only commands:
+
+```bash
+xiaohongshu-skill check-login
+xiaohongshu-skill profiles
+xiaohongshu-skill selectors
+xiaohongshu-skill selectors --owner=publish
+xiaohongshu-skill contracts
+xiaohongshu-skill contracts --command=search
+xiaohongshu-skill search "关键词" --limit=5
+xiaohongshu-skill feed <id> <xsec_token>
+xiaohongshu-skill feed <id> <xsec_token> --load-comments --max-comments=20
+xiaohongshu-skill user <user_id> [xsec_token]
+xiaohongshu-skill me
+xiaohongshu-skill explore --limit=10
+```
+
+Write commands that require user approval:
+
+```bash
+xiaohongshu-skill publish --title="标题" --content="正文" --images="img.jpg"
+xiaohongshu-skill publish-video --title="标题" --content="正文" --video="video.mp4"
+xiaohongshu-skill publish-md --title="标题" --file=article.md
+xiaohongshu-skill publish-longform --title="标题" --content="正文"
+xiaohongshu-skill comment <id> <token> --content="内容"
+xiaohongshu-skill reply <id> <token> --comment-id=<cid> --reply-user-id=<uid> --content="内容"
+xiaohongshu-skill like <id> <token>
+xiaohongshu-skill collect <id> <token>
+```
+
+Safety rules:
+
+- Ask the user before publishing, commenting, replying, liking, collecting, or scheduling.
+- Stop when Xiaohongshu shows captcha, QR login, or verification.
+- Use headed mode for login and manual verification.
+- Keep pacing enabled.
+- Use test accounts for live tests.
+- Do not expose cookies, QR codes, profile links, screenshots, account names, or local paths in public issues.
+
+Output contract:
+
+- Commands return JSON where possible.
+- `search` returns `count` and `results`.
+- `publish` returns status fields and stops before final publish unless the user approved the action.
+- `selectors` and `contracts` expose stable data for agent wiring.
+
+Public docs:
+
+- Install: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md
+- Commands: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md
+- Integrations: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md
+- Security: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/SECURITY.md
+- Reference map: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/REFERENCE.md
+- Roadmap: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/ROADMAP.md
+- Examples: https://github.com/DeliciousBuding/xiaohongshu-skill/tree/main/examples
+- Demo outputs: https://deliciousbuding.github.io/xiaohongshu-skill/demo.html
+
+Search and catalog terms:
+
+Xiaohongshu Skill, RedNote Skill, 小红书 Skill, xiaohongshu-skill, xhs automation, 小红书 AI Agent, AI Agent Skill, AgentSkill, Python Playwright, browser automation, Claude Code Skill, Codex Skill, OpenClaw Skill, ClawHub, skills.sh.

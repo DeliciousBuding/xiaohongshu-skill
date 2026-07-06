@@ -7,6 +7,7 @@
 [![Stars](https://img.shields.io/github/stars/DeliciousBuding/xiaohongshu-skill?style=social)](https://github.com/DeliciousBuding/xiaohongshu-skill)
 [![Version](https://img.shields.io/badge/version-v1.3.0-blue)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![skills.sh](https://skills.sh/b/deliciousbuding/xiaohongshu-skill)](https://www.skills.sh/deliciousbuding/xiaohongshu-skill)
 [![ClawHub](https://img.shields.io/badge/ClawHub-download-orange)](https://clawhub.com)
 
 Python + Playwright 浏览器自动化。打开页面，从 `window.__INITIAL_STATE__` 抽结构化数据，纯 JSON 输出。`SKILL.md` 遵循 [AgentSkills](https://agentskills.io) 开放规范，兼容 Claude Code / OpenClaw / Codex / Hermes Agent 等平台。
@@ -27,6 +28,7 @@ Python + Playwright 浏览器自动化。打开页面，从 `window.__INITIAL_ST
 
 | 入口 | 适合谁 | 命令 |
 |------|--------|------|
+| skills.sh | 通用 Skill CLI 用户 | `npx skills add DeliciousBuding/xiaohongshu-skill` |
 | ClawHub | OpenClaw 用户 | `clawhub install xiaohongshu-skill` |
 | 全局 CLI | 想直接跑命令的人 | `pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git` |
 | Skill 目录 | Claude Code / Codex | `git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git <skills-dir>/xiaohongshu-skill` |
@@ -218,6 +220,7 @@ Python 3.10+，Playwright >= 1.40.0。
 `SKILL.md` 遵循 [AgentSkills](https://agentskills.io) 开放规范，兼容所有支持该标准的 AI Agent 平台。`{baseDir}` 模板变量会被自动替换为实际路径。
 
 **支持平台：**
+- **skills.sh**：`npx skills add DeliciousBuding/xiaohongshu-skill`
 - **Claude Code**：目录加到 Skill 配置，自动识别加载
 - **OpenClaw**：`clawhub install xiaohongshu-skill` 一键安装
 - **Codex**：放入 Skills 目录即可，跟 OpenClaw 同体系

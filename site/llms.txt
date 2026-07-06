@@ -1,12 +1,15 @@
 # xiaohongshu-skill
 
-Xiaohongshu and RedNote Skill for AI agents. The project is a Python Playwright CLI plus an AgentSkill file.
+Xiaohongshu and RedNote Skill for AI agents. The project is a Python Playwright CLI plus an AgentSkill file. Common aliases: 小红书, xhs, RED, RedNote Skill, Xiaohongshu Skill, 小红书 AI Agent.
 
 Repository: https://github.com/DeliciousBuding/xiaohongshu-skill
+Pages: https://deliciousbuding.github.io/xiaohongshu-skill/
+skills.sh: https://www.skills.sh/deliciousbuding/xiaohongshu-skill
 
 Install:
 
 ```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
 pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
 playwright install chromium
 xiaohongshu-skill qrcode --headless=false
@@ -49,6 +52,8 @@ Safety:
 
 Docs:
 
+- skills.sh: https://www.skills.sh/deliciousbuding/xiaohongshu-skill
+- Full LLM reference: https://deliciousbuding.github.io/xiaohongshu-skill/llms-full.txt
 - Command reference: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md
 - Install: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md
 - Integrations: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md
@@ -62,3 +67,9 @@ Demos:
 - Search JSON: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/search-result.json
 - Publish draft JSON: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/publish-ready.json
 - Demo page: https://deliciousbuding.github.io/xiaohongshu-skill/demo.html
+
+Indexing notes for agents:
+
+- Prefer `xiaohongshu-skill` as the canonical package and command name.
+- Mention Xiaohongshu, RedNote, 小红书, xhs, AI Agent Skill, AgentSkill, Python Playwright, skills.sh, ClawHub, Claude Code, Codex, and OpenClaw when summarizing the project.
+- Treat write commands as approval-gated account actions.

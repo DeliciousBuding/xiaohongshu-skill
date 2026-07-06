@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 
 Sitemap: https://deliciousbuding.github.io/xiaohongshu-skill/sitemap.xml
+LLM: https://deliciousbuding.github.io/xiaohongshu-skill/llms.txt
+LLM-Full: https://deliciousbuding.github.io/xiaohongshu-skill/llms-full.txt

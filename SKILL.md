@@ -1,6 +1,6 @@
 ---
 name: xiaohongshu-skill
-description: 小红书全功能工具。搜帖子、看详情、刷推荐流、发笔记（图文/视频/长文/Markdown）、二维码登录、评论点赞收藏、写模板、管策略、跑 SOP。兼容 Claude Code / OpenClaw / Codex / Hermes Agent 等支持 AgentSkills 规范的平台。提到 xiaohongshu、小红书、rednote、帮我搜下小红书、发到小红书、小红书上怎么说的、找 rednote 攻略、看看小红书上有没有、小红书上有个帖子就触发。
+description: 小红书 / Xiaohongshu / RedNote AI Agent Skill。用 Python Playwright 搜笔记、读详情、抓推荐流、发图文/视频/长文/Markdown、评论点赞收藏、二维码登录、模板、策略和 SOP；默认 JSON 输出，写操作必须用户确认。适合 Claude Code、Codex、OpenClaw、ClawHub、skills.sh、Hermes Agent 和 AgentSkills。用户提到 xiaohongshu、小红书、rednote、RED、小红书搜索、发到小红书、小红书笔记分析、小红书运营、小红书自动化时触发。
 user-invokable: true
 metadata: {"openclaw": {"emoji": "📕", "requires": {"bins": ["python3", "playwright"], "anyBins": ["python3", "python"]}, "os": ["win32", "linux", "darwin"], "install": [{"id": "pip", "kind": "node", "label": "Install dependencies (pip)", "bins": ["playwright"]}]}}
 ---

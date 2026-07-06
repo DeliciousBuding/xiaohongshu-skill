@@ -7,6 +7,7 @@ Xiaohongshu (RED) AI Agent toolkit. Search. Post. Engage. One command does it al
 [![Stars](https://img.shields.io/github/stars/DeliciousBuding/xiaohongshu-skill?style=social)](https://github.com/DeliciousBuding/xiaohongshu-skill)
 [![Version](https://img.shields.io/badge/version-v1.3.0-blue)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![skills.sh](https://skills.sh/b/deliciousbuding/xiaohongshu-skill)](https://www.skills.sh/deliciousbuding/xiaohongshu-skill)
 [![ClawHub](https://img.shields.io/badge/ClawHub-download-orange)](https://clawhub.com)
 
 Python + Playwright browser automation. Opens pages, pulls structured data from `window.__INITIAL_STATE__`, and spits out clean JSON. `SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent and any platform that supports the AgentSkills spec.
@@ -27,6 +28,7 @@ Public site: [GitHub Pages](https://deliciousbuding.github.io/xiaohongshu-skill/
 
 | Entry | Best for | Command |
 |-------|----------|---------|
+| skills.sh | Skill CLI users | `npx skills add DeliciousBuding/xiaohongshu-skill` |
 | ClawHub | OpenClaw users | `clawhub install xiaohongshu-skill` |
 | Global CLI | Shell users | `pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git` |
 | Skill folder | Claude Code / Codex | `git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git <skills-dir>/xiaohongshu-skill` |
@@ -220,6 +222,7 @@ Python 3.10+, Playwright >= 1.40.0.
 `SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent and any platform that supports the AgentSkills spec. The `{baseDir}` template variable is automatically resolved to the actual path.
 
 **Supported platforms:**
+- **skills.sh**: `npx skills add DeliciousBuding/xiaohongshu-skill`
 - **Claude Code**: Add the directory to your Skill config; auto-detected and loaded
 - **OpenClaw**: `clawhub install xiaohongshu-skill` one-click install
 - **Codex**: Drop into your Skills directory; same system as OpenClaw

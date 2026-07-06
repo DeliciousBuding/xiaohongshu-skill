@@ -45,6 +45,22 @@ python -m scripts qrcode --headless=false
 
 Use the same prompts as Claude Code. Codex should read `SKILL.md` and call `python -m scripts`.
 
+## skills.sh
+
+Install with the Skill CLI:
+
+```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
+```
+
+Public page:
+
+```text
+https://www.skills.sh/deliciousbuding/xiaohongshu-skill
+```
+
+The skills.sh listing is generated from the GitHub repository. Reinstall with the CLI after public metadata changes if the page has not refreshed yet.
+
 ## OpenClaw and ClawHub
 
 Preferred install:
