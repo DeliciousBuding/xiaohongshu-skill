@@ -7,13 +7,12 @@
 import json
 import os
 import random
-import sys
 import time
-from pathlib import Path
 from typing import Optional, Any, Dict
 
 from ._logging import get_logger
 from ._utils import unwrap_value
+from .profiles import env_profile, profile_paths
 
 log = get_logger(__name__)
 
@@ -25,10 +24,10 @@ except ImportError:
 
 
 # Cookie 文件路径（备份用）
-DEFAULT_COOKIE_PATH = os.path.expanduser("~/.xiaohongshu/cookies.json")
+DEFAULT_COOKIE_PATH = str(profile_paths().cookie_path)
 
 # 持久化浏览器数据目录（保存 cookies + localStorage + sessionStorage 等全部会话状态）
-DEFAULT_USER_DATA_DIR = os.path.expanduser("~/.xiaohongshu/browser-data")
+DEFAULT_USER_DATA_DIR = str(profile_paths().user_data_dir)
 
 # 验证码/安全拦截页面的 URL 特征
 CAPTCHA_URL_PATTERNS = [
@@ -70,13 +69,14 @@ class XiaohongshuClient:
     def __init__(
         self,
         headless: bool = True,
-        cookie_path: str = DEFAULT_COOKIE_PATH,
-        user_data_dir: str = DEFAULT_USER_DATA_DIR,
+        cookie_path: Optional[str] = None,
+        user_data_dir: Optional[str] = None,
         timeout: int = 60,
     ):
         self.headless = headless
-        self.cookie_path = cookie_path
-        self.user_data_dir = user_data_dir
+        paths = profile_paths(env_profile())
+        self.cookie_path = cookie_path or str(paths.cookie_path)
+        self.user_data_dir = user_data_dir or str(paths.user_data_dir)
         self.timeout = timeout * 1000  # 转换为毫秒
 
         self.playwright: Optional[Playwright] = None

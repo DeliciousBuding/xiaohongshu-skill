@@ -5,7 +5,6 @@
 整合 xiaohongshu-ops 的安全评论理念（长度校验、人性化延迟、频率检测）
 """
 
-import json
 import sys
 import time
 import random

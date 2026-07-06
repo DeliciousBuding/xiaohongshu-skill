@@ -5,7 +5,6 @@
 支持生成微信登录二维码，保存供主模型发送
 """
 
-import json
 import sys
 import time
 import base64
@@ -13,6 +12,7 @@ import os
 from typing import Optional, Tuple, Dict, Any
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .profiles import env_profile, profile_paths
 
 
 # QRCode 图片保存目录 - 放在 skill 文件夹内
@@ -272,13 +272,14 @@ def login(
         client.close()
 
 
-def logout(cookie_path=None):
+def logout(cookie_path=None, user_data_dir=None):
     """删除浏览器持久化数据和 Cookie 文件，重置登录状态"""
     import shutil
     # 1. 删除持久化浏览器数据目录
-    user_data_dir = os.path.join(os.path.expanduser("~"), ".xiaohongshu", "browser-data")
-    if os.path.exists(user_data_dir):
-        shutil.rmtree(user_data_dir)
+    paths = profile_paths(env_profile())
+    data_dir = user_data_dir or str(paths.user_data_dir)
+    if os.path.exists(data_dir):
+        shutil.rmtree(data_dir)
     # 2. 删除 cookie JSON
     path = cookie_path or DEFAULT_COOKIE_PATH
     if os.path.exists(path):

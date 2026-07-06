@@ -2,12 +2,11 @@
 XiaohongshuClient 单元测试
 """
 
-import json
 import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock
 import pytest
 
-from scripts.client import XiaohongshuClient, CaptchaError, CAPTCHA_URL_PATTERNS
+from scripts.client import XiaohongshuClient, CaptchaError
 
 
 class TestInstanceStateIsolation:
@@ -187,6 +186,54 @@ class TestThrottle:
         assert client._navigate_count == 1
         client._throttle()
         assert client._navigate_count == 2
+
+
+class TestBrowserAutomationContract:
+    """测试浏览器自动化启动契约"""
+
+    def test_start_uses_persistent_context_and_stealth(self, monkeypatch, tmp_path):
+        """start 应使用持久化上下文并注入 stealth 脚本"""
+        fake_page = MagicMock()
+        fake_context = MagicMock()
+        fake_context.cookies.return_value = []
+        fake_context.pages = []
+        fake_context.new_page.return_value = fake_page
+
+        fake_playwright = MagicMock()
+        fake_playwright.chromium.launch_persistent_context.return_value = fake_context
+
+        fake_sync = MagicMock()
+        fake_sync.start.return_value = fake_playwright
+        monkeypatch.setattr("scripts.client.sync_playwright", lambda: fake_sync)
+
+        client = XiaohongshuClient(
+            cookie_path=str(tmp_path / "cookies.json"),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+
+        client.start()
+
+        call_args = fake_playwright.chromium.launch_persistent_context.call_args
+        assert call_args.kwargs["user_data_dir"] == str(tmp_path / "browser-data")
+        assert "--enable-automation" in call_args.kwargs["ignore_default_args"]
+        assert "--disable-blink-features=AutomationControlled" in call_args.kwargs["args"]
+        assert call_args.kwargs["locale"] == "zh-CN"
+        assert call_args.kwargs["timezone_id"] == "Asia/Shanghai"
+        fake_context.add_init_script.assert_called_once()
+        assert "navigator, 'webdriver'" in fake_context.add_init_script.call_args.args[0]
+        fake_page.set_default_timeout.assert_called_once_with(client.timeout)
+
+    def test_stealth_script_covers_common_automation_signals(self):
+        """内置 stealth 脚本应覆盖常见自动化特征"""
+        stealth_js = XiaohongshuClient.STEALTH_JS
+
+        assert "navigator, 'webdriver'" in stealth_js
+        assert "window.chrome.runtime" in stealth_js
+        assert "navigator, 'plugins'" in stealth_js
+        assert "navigator, 'languages'" in stealth_js
+        assert "WebGLRenderingContext.prototype.getParameter" in stealth_js
+        assert "HTMLCanvasElement.prototype.toDataURL" in stealth_js
+        assert "Error.prototype, 'stack'" in stealth_js
 
 
 class TestCaptchaError:

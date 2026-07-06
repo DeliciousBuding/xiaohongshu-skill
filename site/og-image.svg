@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">xiaohongshu-skill</title>
+  <desc id="desc">Terminal style preview for the Xiaohongshu Skill for AI agents.</desc>
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <rect x="88" y="72" width="1024" height="486" rx="18" fill="#101418"/>
+  <circle cx="126" cy="112" r="11" fill="#ef665b"/>
+  <circle cx="160" cy="112" r="11" fill="#f5bd4f"/>
+  <circle cx="194" cy="112" r="11" fill="#61c554"/>
+  <text x="124" y="205" fill="#edf2f7" font-family="Consolas, monospace" font-size="32">xiaohongshu-skill search "上海咖啡"</text>
+  <text x="124" y="277" fill="#9be7c2" font-family="Consolas, monospace" font-size="30">{ "count": 3, "results": [...] }</text>
+  <text x="124" y="373" fill="#ffffff" font-family="Arial, sans-serif" font-size="58" font-weight="700">Xiaohongshu Skill</text>
+  <text x="124" y="436" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="34">Python Playwright automation for AI agents</text>
+  <text x="124" y="492" fill="#ff7a8a" font-family="Arial, sans-serif" font-size="30">Search · Read · Publish · Operate</text>
+</svg>

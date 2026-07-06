@@ -2,8 +2,29 @@
 共享 pytest fixtures
 """
 
-from unittest.mock import MagicMock, PropertyMock
+import time
+from unittest.mock import MagicMock
 import pytest
+
+from scripts.test_gate import live_skip_reason, should_run_live_tests
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip live/e2e tests unless the contributor opted in."""
+    if should_run_live_tests():
+        return
+
+    skip_live = pytest.mark.skip(reason=live_skip_reason())
+    for item in items:
+        if "live" in item.keywords or "e2e" in item.keywords:
+            item.add_marker(skip_live)
+
+
+@pytest.fixture(autouse=True)
+def no_real_sleep(monkeypatch):
+    """Keep unit tests fast while production code keeps its humanized delays."""
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
+    monkeypatch.delenv("XHS_PROFILE", raising=False)
 
 
 @pytest.fixture

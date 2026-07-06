@@ -1,0 +1,62 @@
+# xiaohongshu-skill
+
+Xiaohongshu and RedNote Skill for AI agents. The project is a Python Playwright CLI plus an AgentSkill file.
+
+Repository: https://github.com/DeliciousBuding/xiaohongshu-skill
+
+Install:
+
+```bash
+pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
+playwright install chromium
+xiaohongshu-skill qrcode --headless=false
+```
+
+Use `--profile <name>` for separate accounts on the same machine.
+
+Read-only commands:
+
+- `xiaohongshu-skill check-login`
+- `xiaohongshu-skill profiles`
+- `xiaohongshu-skill selectors`
+- `xiaohongshu-skill contracts`
+- `xiaohongshu-skill search "关键词" --limit=5`
+- `xiaohongshu-skill feed <id> <xsec_token>`
+- `xiaohongshu-skill user <user_id> [xsec_token]`
+- `xiaohongshu-skill explore --limit=10`
+
+Write commands require user approval:
+
+- `publish`
+- `publish-video`
+- `publish-md`
+- `publish-longform`
+- `comment`
+- `reply`
+- `reply-notification`
+- `like`
+- `unlike`
+- `collect`
+- `uncollect`
+
+Safety:
+
+- Stop on captcha or verification pages.
+- Keep pacing enabled.
+- Use headed mode for manual login and verification.
+- Do not publish, comment, like, or collect without explicit user approval.
+- Live tests require `XHS_LIVE_TEST=1`.
+
+Docs:
+
+- Command reference: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md
+- Install: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md
+- Integrations: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md
+- Security: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/SECURITY.md
+- Roadmap: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/ROADMAP.md
+
+Demos:
+
+- Search JSON: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/search-result.json
+- Publish draft JSON: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/publish-ready.json
+- Demo page: https://deliciousbuding.github.io/xiaohongshu-skill/demo.html

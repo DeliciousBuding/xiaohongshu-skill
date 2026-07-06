@@ -7,7 +7,7 @@
 import json
 import sys
 import time
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any, List
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 

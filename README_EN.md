@@ -9,12 +9,12 @@ Xiaohongshu (RED) AI Agent toolkit. Search. Post. Engage. One command does it al
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![ClawHub](https://img.shields.io/badge/ClawHub-download-orange)](https://clawhub.com)
 
-Python + Playwright browser automation. Opens pages, pulls structured data from `window.__INITIAL_STATE__`, and spits out clean JSON. `SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent — any platform that supports the AgentSkills spec.
+Python + Playwright browser automation. Opens pages, pulls structured data from `window.__INITIAL_STATE__`, and spits out clean JSON. `SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent and any platform that supports the AgentSkills spec.
 
 ## What it does
 
 <!-- TODO: record search demo GIF -->
-**Search.** Full-text keyword search with every filter you need — sort order, note type, time range, scope, location.
+**Search.** Full-text keyword search with sort order, note type, time range, scope, and location filters.
 <!-- TODO: record publishing demo GIF -->
 **Post.** Images, video, Markdown-to-image, long-form. Schedule or publish right now.
 <!-- TODO: record engagement demo GIF -->
@@ -84,7 +84,7 @@ xiaohongshu-skill me
 ```bash
 xiaohongshu-skill comment <id> <token> --content="写得真好"
 xiaohongshu-skill reply <id> <token> --comment-id=<cid> --reply-user-id=<uid> --content="感谢"
-xiaohongshu-skill reply-notification --content="谢谢" --index=0  # Reply from notifications page — safer
+xiaohongshu-skill reply-notification --content="谢谢" --index=0  # Reply from notifications page
 ```
 
 ### Like & bookmark
@@ -126,6 +126,30 @@ xiaohongshu-skill strategy-check-limit --limit-type=likes
 xiaohongshu-skill strategy-add-post --date="2025-03-01" --topic="春日出行" --type=图文
 ```
 
+### Account profiles
+
+The default profile keeps the legacy `~/.xiaohongshu/` session. Use `--profile` for multiple accounts. Each profile gets isolated cookies and browser data:
+
+```bash
+xiaohongshu-skill --profile brand-a qrcode --headless=false
+xiaohongshu-skill --profile brand-a search "咖啡" --limit=5
+xiaohongshu-skill profiles
+xiaohongshu-skill --profile brand-a logout
+```
+
+### Maintainer helpers
+
+```bash
+xiaohongshu-skill selectors
+xiaohongshu-skill selectors --owner=publish
+xiaohongshu-skill contracts
+xiaohongshu-skill contracts --command=search
+```
+
+`selectors` prints the browser selector contracts. It is read-only and does not open a browser.
+
+`contracts` prints CLI JSON field contracts for agent integrations.
+
 ### SOP workflows
 
 ```bash
@@ -158,6 +182,8 @@ Every command outputs JSON. Here's what a search result looks like:
 }
 ```
 
+Public examples live in [examples/demo](examples/demo) and the Pages demo page. They use synthetic data and do not include real accounts, cookies, QR codes, or local paths.
+
 ## Anti-detection measures
 
 Xiaohongshu's anti-bot is aggressive. Keep these protections on:
@@ -183,15 +209,24 @@ Python 3.10+, Playwright >= 1.40.0.
 
 ## Mounting as an AI Skill
 
-`SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent — any platform that supports the AgentSkills spec. The `{baseDir}` template variable is automatically resolved to the actual path.
+`SKILL.md` follows the [AgentSkills](https://agentskills.io) open spec. Compatible with Claude Code / OpenClaw / Codex / Hermes Agent and any platform that supports the AgentSkills spec. The `{baseDir}` template variable is automatically resolved to the actual path.
 
 **Supported platforms:**
-- **Claude Code** — Add the directory to your Skill config; auto-detected and loaded
-- **OpenClaw** — `clawhub install xiaohongshu-skill` one-click install
-- **Codex** — Drop into your Skills directory; same system as OpenClaw
-- **Hermes Agent** — Import `SKILL.md` and the agent picks up every command automatically
+- **Claude Code**: Add the directory to your Skill config; auto-detected and loaded
+- **OpenClaw**: `clawhub install xiaohongshu-skill` one-click install
+- **Codex**: Drop into your Skills directory; same system as OpenClaw
+- **Hermes Agent**: Import `SKILL.md` and the agent picks up every command automatically
 
 Universal approach: clone the repo into your platform's Skills directory. The AI agent loads it on the next session automatically.
+
+## More Docs
+
+- Install: [docs/INSTALL.md](docs/INSTALL.md)
+- Integrations: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)
+- Security and public issue rules: [docs/SECURITY.md](docs/SECURITY.md)
+- GitHub Pages and SEO/GEO: [docs/PAGES.md](docs/PAGES.md)
+- Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Public demos: [examples/demo](examples/demo)
 
 ## FAQ
 
@@ -205,7 +240,7 @@ Universal approach: clone the repo into your platform's Skills directory. The AI
 
 **Will I get banned?** Anti-detection measures help, but this technically violates the ToS. Use a throwaway account. Proceed at your own risk.
 
-**How does this compare to xiaohongshu-mcp?** Inspired by the Go-based [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp). This is a Python rewrite with more features — publishing, strategy planning, and SOP automation that the Go version doesn't have.
+**How does this compare to xiaohongshu-mcp?** Inspired by the Go-based [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp). This Python rewrite adds publishing, strategy planning, and SOP automation.
 
 [![Star History Chart](https://api.star-history.com/svg?repos=DeliciousBuding/xiaohongshu-skill&type=Timeline)](https://www.star-history.com/#DeliciousBuding/xiaohongshu-skill&Timeline)
 
@@ -216,7 +251,7 @@ Like it? Star it. Found a bug? Open an issue (include logs and repro steps). Wan
 ## Heads up
 
 - Cookies expire periodically. Re-login when `check-login` returns false.
-- Don't disable the built-in rate limiting — you'll hit a captcha in seconds.
+- Don't disable the built-in rate limiting. You'll hit a captcha in seconds.
 - xsec_token is session-bound. Always use the most recent value.
 - For educational and research use. Comply with Xiaohongshu's terms of service.
 

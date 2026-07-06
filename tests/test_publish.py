@@ -2,12 +2,10 @@
 发布模块单元测试
 """
 
-import os
-import json
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import pytest
 
-from scripts.publish import PublishAction, md_to_images
+from scripts.publish import PublishAction
 from scripts.client import XiaohongshuClient
 
 
@@ -274,7 +272,7 @@ class TestPublishImage:
         """图文发布带标签"""
         mock_ready.return_value = {"title": "测试", "title_ok": True}
 
-        result = self.action.publish_image(
+        self.action.publish_image(
             title="测试",
             content="正文",
             image_paths=["img.jpg"],

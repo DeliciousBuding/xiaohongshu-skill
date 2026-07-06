@@ -7,6 +7,9 @@
 ```bash
 python -m scripts qrcode --headless=false   # 扫码登录
 python -m scripts check-login               # 查登录状态
+python -m scripts profiles                  # 列出本地账号 profile
+python -m scripts selectors                 # 列出浏览器选择器契约
+python -m scripts contracts                 # 列出 CLI JSON 输出契约
 python -m scripts me                        # 看自己主页
 ```
 
@@ -55,6 +58,19 @@ python -m scripts uncollect <feed_id> <xsec_token>
 ```bash
 python -m scripts explore --limit=20
 ```
+
+## 维护辅助
+
+```bash
+python -m scripts selectors
+python -m scripts selectors --owner=publish
+python -m scripts contracts
+python -m scripts contracts --command=search
+```
+
+`selectors` 是只读命令，用来查看浏览器自动化选择器契约。它不会打开浏览器，也不会读取账号状态。
+
+`contracts` 是只读命令，用来查看 CLI JSON 输出契约。Agent 接入时优先按这些字段解析。
 
 ## 发布
 
@@ -115,6 +131,7 @@ python -m scripts sop --type=comment --replies='[{"feed_id":"abc","xsec_token":"
 | 参数 | 说明 |
 |------|------|
 | `--headless` | `true`(默认) 无头 / `false` 显示浏览器 |
+| `--profile` | 本地账号 profile 名称，用于隔离 Cookie 和浏览器数据 |
 | `--limit` / `-n` | 返回数量上限 |
 
 ## 退出码

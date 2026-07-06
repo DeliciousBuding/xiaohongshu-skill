@@ -8,16 +8,16 @@
 import argparse
 import json
 import logging
+import os
 import sys
-from typing import Optional
 
 # Windows GBK 终端兼容性修复：强制 stdout 使用 UTF-8
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 from . import __version__
-from ._logging import get_logger
-from .client import XiaohongshuClient, CaptchaError, DEFAULT_COOKIE_PATH
+from .client import XiaohongshuClient, CaptchaError
+from .profiles import ProfileNameError, list_profiles, profile_paths
 from . import login
 from . import search
 from . import feed
@@ -26,6 +26,8 @@ from . import comment
 from . import interact
 from . import explore
 from . import publish
+from .output_contracts import get_output_contracts
+from .selectors import get_selector_contracts
 from . import templates
 from . import strategy
 from . import sop
@@ -46,6 +48,29 @@ def _headless(args) -> bool:
     return val.lower() != 'false'
 
 
+def _profile(args) -> str | None:
+    profile = getattr(args, "profile", None)
+    return profile.strip() if isinstance(profile, str) and profile.strip() else None
+
+
+def _cookie_path(args) -> str:
+    profile = _profile(args)
+    paths = profile_paths(profile)
+    if profile:
+        os.environ["XHS_PROFILE"] = profile
+    if getattr(args, "cookie", None):
+        return args.cookie
+    return str(paths.cookie_path)
+
+
+def _user_data_dir(args) -> str:
+    profile = _profile(args)
+    paths = profile_paths(profile)
+    if profile:
+        os.environ["XHS_PROFILE"] = profile
+    return str(paths.user_data_dir)
+
+
 # ============================================================
 # 命令处理函数
 # ============================================================
@@ -54,7 +79,7 @@ def cmd_login(args):
     """登录命令 — 生成二维码并等待扫码"""
     result = login.login(
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
         timeout=args.timeout,
     )
     print(format_output(result))
@@ -70,7 +95,7 @@ def cmd_qrcode(args):
     获取二维码并等待扫码。
     如果已登录，直接返回。
     """
-    cookie_path = args.cookie or DEFAULT_COOKIE_PATH
+    cookie_path = _cookie_path(args)
     headless = _headless(args)
 
     # 1) 先快速检查是否已登录
@@ -123,7 +148,7 @@ def cmd_qrcode(args):
 def cmd_check_login(args):
     """检查登录状态"""
     is_logged_in, username = login.check_login(
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output({
         "is_logged_in": is_logged_in,
@@ -134,8 +159,57 @@ def cmd_check_login(args):
 
 def cmd_logout(args):
     """删除登录状态"""
-    result = login.logout(cookie_path=args.cookie or DEFAULT_COOKIE_PATH)
+    result = login.logout(cookie_path=_cookie_path(args), user_data_dir=_user_data_dir(args))
     print(format_output(result))
+    return 0
+
+
+def cmd_profiles(args):
+    """列出本地账号 profile"""
+    profiles = list_profiles()
+    print(format_output({
+        "count": len(profiles),
+        "profiles": profiles,
+    }))
+    return 0
+
+
+def cmd_selectors(args):
+    """列出浏览器选择器契约"""
+    contracts = [
+        {
+            "name": contract.name,
+            "owner": contract.owner,
+            "purpose": contract.purpose,
+            "selectors": list(contract.selectors),
+            "required": contract.required,
+        }
+        for contract in get_selector_contracts(owner=args.owner)
+    ]
+    print(format_output({
+        "count": len(contracts),
+        "contracts": contracts,
+    }))
+    return 0
+
+
+def cmd_contracts(args):
+    """列出 CLI JSON 输出契约"""
+    contracts = [
+        {
+            "name": contract.name,
+            "command": contract.command,
+            "purpose": contract.purpose,
+            "required_fields": list(contract.required_fields),
+            "item_fields": list(contract.item_fields),
+            "notes": contract.notes,
+        }
+        for contract in get_output_contracts(command=args.command_name)
+    ]
+    print(format_output({
+        "count": len(contracts),
+        "contracts": contracts,
+    }))
     return 0
 
 
@@ -150,7 +224,7 @@ def cmd_search(args):
         location=args.location,
         limit=args.limit,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output({
         "count": len(results),
@@ -167,7 +241,7 @@ def cmd_feed(args):
         load_comments=args.load_comments,
         max_comments=args.max_comments,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(detail))
     return 0 if detail else 1
@@ -179,7 +253,7 @@ def cmd_user(args):
         user_id=args.user_id,
         xsec_token=args.xsec_token or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(profile))
     return 0 if profile else 1
@@ -189,7 +263,7 @@ def cmd_me(args):
     """获取自己的个人主页"""
     profile = user.my_profile(
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(profile))
     return 0 if profile else 1
@@ -202,7 +276,7 @@ def cmd_comment(args):
         xsec_token=args.xsec_token or "",
         content=args.content,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -217,7 +291,7 @@ def cmd_reply(args):
         reply_user_id=args.reply_user_id,
         content=args.content,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -229,7 +303,7 @@ def cmd_like(args):
         feed_id=args.feed_id,
         xsec_token=args.xsec_token or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -241,7 +315,7 @@ def cmd_unlike(args):
         feed_id=args.feed_id,
         xsec_token=args.xsec_token or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -253,7 +327,7 @@ def cmd_collect(args):
         feed_id=args.feed_id,
         xsec_token=args.xsec_token or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -265,7 +339,7 @@ def cmd_uncollect(args):
         feed_id=args.feed_id,
         xsec_token=args.xsec_token or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -276,7 +350,7 @@ def cmd_explore(args):
     result = explore.explore(
         limit=args.limit,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0
@@ -294,7 +368,7 @@ def cmd_publish(args):
         schedule_time=args.schedule_time,
         auto_publish=args.auto_publish,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") in ("success", "ready") else 1
@@ -311,7 +385,7 @@ def cmd_publish_video(args):
         schedule_time=args.schedule_time,
         auto_publish=args.auto_publish,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") in ("success", "ready") else 1
@@ -342,7 +416,7 @@ def cmd_publish_md(args):
         image_width=args.width,
         output_dir=args.output_dir or "",
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") in ("success", "ready") else 1
@@ -355,7 +429,7 @@ def cmd_publish_longform(args):
         content=args.content,
         auto_publish=args.auto_publish,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") in ("success", "ready") else 1
@@ -367,7 +441,7 @@ def cmd_reply_notification(args):
         content=args.content,
         notification_index=args.index,
         headless=_headless(args),
-        cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+        cookie_path=_cookie_path(args),
     )
     print(format_output(result))
     return 0 if result.get("status") == "success" else 1
@@ -467,6 +541,7 @@ def main():
     parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
     parser.add_argument("--quiet", "-q", action="store_true", help="仅输出 JSON 结果")
     parser.add_argument("--cookie", "-c", help="Cookie 文件路径", default=None)
+    parser.add_argument("--profile", help="账号 profile 名称（默认沿用旧路径）", default=None)
     parser.add_argument("--headless", help="无头模式: true/false（默认 true）", default='true')
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
@@ -490,6 +565,20 @@ def main():
     # logout
     logout_p = subparsers.add_parser("logout", help="删除登录状态（Cookie 和浏览器数据）")
     logout_p.set_defaults(func=cmd_logout)
+
+    # profiles
+    profiles_p = subparsers.add_parser("profiles", help="列出本地账号 profile")
+    profiles_p.set_defaults(func=cmd_profiles)
+
+    # selectors
+    selectors_p = subparsers.add_parser("selectors", help="列出浏览器选择器契约")
+    selectors_p.add_argument("--owner", help="按模块过滤，如 search/publish/comment")
+    selectors_p.set_defaults(func=cmd_selectors)
+
+    # contracts
+    contracts_p = subparsers.add_parser("contracts", help="列出 CLI JSON 输出契约")
+    contracts_p.add_argument("--command", dest="command_name", help="按命令过滤，如 search/publish")
+    contracts_p.set_defaults(func=cmd_contracts)
 
     # search
     s_p = subparsers.add_parser("search", help="搜索内容")
@@ -690,6 +779,13 @@ def main():
             "error_type": "CaptchaError",
             "message": str(e),
             "captcha_url": e.captcha_url,
+        }))
+        return 1
+    except ProfileNameError as e:
+        print(format_output({
+            "status": "error",
+            "error_type": "ProfileNameError",
+            "message": str(e),
         }))
         return 1
     except Exception as e:

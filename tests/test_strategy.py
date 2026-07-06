@@ -2,7 +2,6 @@
 运营策略模块单元测试
 """
 
-import json
 import os
 import tempfile
 import pytest

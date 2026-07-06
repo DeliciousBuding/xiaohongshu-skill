@@ -2,12 +2,10 @@
 写作模板模块单元测试
 """
 
-import pytest
 
 from scripts.templates import (
     TemplateEngine, generate_template,
-    TITLE_HOOKS, CONTENT_TEMPLATES, TAG_DATABASE,
-    MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH, MAX_LONGFORM_LENGTH, MAX_TAGS,
+    MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH,
 )
 
 

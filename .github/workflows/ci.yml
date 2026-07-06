@@ -31,8 +31,13 @@ jobs:
 
       - name: 代码检查（ruff）
         run: |
-          pip install ruff
           ruff check scripts/ tests/
 
+      - name: 公开文档检查
+        run: python -m scripts.docs_check
+
+      - name: Pages SEO/GEO 检查
+        run: python -m scripts.site_check
+
       - name: 运行测试
-        run: pytest -v
+        run: pytest -q

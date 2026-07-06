@@ -1,0 +1,17 @@
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "note_demo_001",
+      "xsec_token": "xsec_demo_token",
+      "title": "上海咖啡地图",
+      "type": "normal",
+      "user": "demo_user",
+      "user_id": "user_demo_001",
+      "liked_count": "128",
+      "collected_count": "42",
+      "comment_count": "9",
+      "cover_url": "https://example.com/demo-cover.jpg"
+    }
+  ]
+}

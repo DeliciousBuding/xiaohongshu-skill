@@ -1,0 +1,17 @@
+{
+  "status": "ready",
+  "action": "publish_image",
+  "title": "周末咖啡路线",
+  "image_count": 3,
+  "tags": ["咖啡", "城市漫步"],
+  "schedule_time": null,
+  "is_original": false,
+  "visibility": "公开可见",
+  "published": false,
+  "ready_check": {
+    "title": "周末咖啡路线",
+    "title_ok": true,
+    "publish_button_visible": true
+  },
+  "message": "Draft is ready and waiting at the publish button."
+}

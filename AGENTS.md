@@ -1,6 +1,6 @@
 # AGENTS.md
 
-xiaohongshu-skill — 小红书 AI Agent 工具箱。本项目是 [AgentSkills](https://agentskills.io) 规范兼容的 Skill。
+xiaohongshu-skill 是小红书 AI Agent 工具箱。本项目兼容 [AgentSkills](https://agentskills.io) 规范。
 
 ## AI Agent 工作约定
 
@@ -38,7 +38,12 @@ xiaohongshu-skill/
 - 遵循 PEP 8，不做过度抽象
 - 新功能带测试（pytest）
 - Conventional Commits（feat/fix/docs/chore/test/refactor）
-- 改 `client.py` 要跑全量测试：`pytest -v`
+- 改 `client.py` 要跑全量测试：`python -m pytest -q`
+- 改浏览器选择器时同步 `scripts/selectors.py`，并跑 `python -m pytest tests/test_selectors.py -q`
+- 改 CLI 输出字段时同步 `scripts/output_contracts.py`，并跑 `python -m pytest tests/test_output_contracts.py -q`
+- `live` / `e2e` 测试默认跳过。真实站点测试必须显式设置 `XHS_LIVE_TEST=1`
+- 提交前跑：`python -m scripts.docs_check`、`python -m scripts.site_check`、`python -m ruff check scripts tests`、`python -m pytest -q`
+- Windows 可用 `.\make.ps1 check` 跑默认门禁
 
 ## 平台兼容
 

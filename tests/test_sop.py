@@ -7,7 +7,7 @@ import os
 import pytest
 
 from scripts.sop import SOPEngine, run_publish_sop, run_comment_sop, run_explore_sop
-from scripts.strategy import StrategyManager, STRATEGY_FILE
+from scripts.strategy import StrategyManager
 
 
 @pytest.fixture

@@ -5,13 +5,11 @@
 整合 xiaohongshu-ops 的安全发布理念（人工确认 checkpoint）
 """
 
-import json
 import os
 import sys
 import time
 import random
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH

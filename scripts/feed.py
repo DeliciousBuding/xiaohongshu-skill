@@ -8,7 +8,7 @@ import json
 import sys
 import time
 import random
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 from ._utils import make_feed_url

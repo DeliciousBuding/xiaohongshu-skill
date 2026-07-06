@@ -40,7 +40,7 @@ xiaohongshu-skill search "美食"
 xiaohongshu-skill check-login
 ```
 
-装完就能用 `xiaohongshu-skill` 命令，不需要 `xiaohongshu-skill`。
+装完就能用 `xiaohongshu-skill` 命令，不需要再从源码目录运行 `python -m scripts`。
 
 ## 功能详解
 
@@ -116,6 +116,30 @@ xiaohongshu-skill strategy-check-limit --limit-type=likes
 xiaohongshu-skill strategy-add-post --date="2025-03-01" --topic="春日出行" --type=图文
 ```
 
+### 多账号 profile
+
+默认 profile 沿用旧的 `~/.xiaohongshu/` 会话。多账号使用时加 `--profile`，每个 profile 会隔离 Cookie 和浏览器数据：
+
+```bash
+xiaohongshu-skill --profile brand-a qrcode --headless=false
+xiaohongshu-skill --profile brand-a search "咖啡" --limit=5
+xiaohongshu-skill profiles
+xiaohongshu-skill --profile brand-a logout
+```
+
+### 维护辅助
+
+```bash
+xiaohongshu-skill selectors
+xiaohongshu-skill selectors --owner=publish
+xiaohongshu-skill contracts
+xiaohongshu-skill contracts --command=search
+```
+
+`selectors` 输出当前浏览器自动化选择器契约，方便排查页面结构变化。它是只读命令，不会打开浏览器。
+
+`contracts` 输出 CLI JSON 字段契约，方便 Agent 集成时做稳定解析。
+
 ### SOP 编排
 
 ```bash
@@ -148,6 +172,8 @@ xiaohongshu-skill sop --type=comment \
 }
 ```
 
+公开示例见 [examples/demo](examples/demo) 和 Pages demo 页面。示例是合成数据，不含真实账号、Cookie、二维码或本机路径。
+
 ## 反爬保护
 
 小红书反爬严，下面这套别关：
@@ -176,12 +202,21 @@ Python 3.10+，Playwright >= 1.40.0。
 `SKILL.md` 遵循 [AgentSkills](https://agentskills.io) 开放规范，兼容所有支持该标准的 AI Agent 平台。`{baseDir}` 模板变量会被自动替换为实际路径。
 
 **支持平台：**
-- **Claude Code** — 目录加到 Skill 配置，自动识别加载
-- **OpenClaw** — `clawhub install xiaohongshu-skill` 一键安装
-- **Codex** — 放入 Skills 目录即可，跟 OpenClaw 同体系
-- **Hermes Agent** — 导入 `SKILL.md`，Agent 自动理解所有命令
+- **Claude Code**：目录加到 Skill 配置，自动识别加载
+- **OpenClaw**：`clawhub install xiaohongshu-skill` 一键安装
+- **Codex**：放入 Skills 目录即可，跟 OpenClaw 同体系
+- **Hermes Agent**：导入 `SKILL.md`，Agent 自动理解所有命令
 
 通用方式：把仓库克隆到平台的 Skills 目录下，AI Agent 会在下个会话自动加载。
+
+## 更多文档
+
+- 安装：[docs/INSTALL.md](docs/INSTALL.md)
+- 平台集成：[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)
+- 安全和公开 issue 规则：[docs/SECURITY.md](docs/SECURITY.md)
+- GitHub Pages 和 SEO/GEO：[docs/PAGES.md](docs/PAGES.md)
+- 路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
+- 公开 demo：[examples/demo](examples/demo)
 
 ## FAQ
 

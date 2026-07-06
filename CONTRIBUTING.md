@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对 xiaohongshu-skill 的关注！欢迎任何形式的贡献。
+欢迎参与 xiaohongshu-skill。
 
 ## 如何参与
 
@@ -28,10 +28,10 @@
 4. 等待 review，通过后合并
 
 分支命名规范：
-- `feature/xxx` — 新功能
-- `fix/xxx` — 问题修复
-- `docs/xxx` — 文档更新
-- `chore/xxx` — 杂项（依赖更新、CI 配置等）
+- `feature/xxx`：新功能
+- `fix/xxx`：问题修复
+- `docs/xxx`：文档更新
+- `chore/xxx`：杂项（依赖更新、CI 配置等）
 
 ### 开发环境搭建
 
@@ -52,7 +52,7 @@ pip install -r requirements.txt
 playwright install chromium
 
 # 5. 运行测试确认环境正常
-pytest -v
+python -m pytest -q
 ```
 
 ### 代码风格
@@ -79,13 +79,48 @@ refactor: 提取公共的 xsec_token 校验逻辑
 
 - 新功能必须附带测试用例
 - 修改核心逻辑（`client.py`、`login.py`、`search.py` 等）需确保已有测试仍然通过
-- 运行 `pytest -v` 确认全部测试通过后再提交
+- 修改浏览器选择器时同步 `scripts/selectors.py`，并运行 `python -m pytest tests/test_selectors.py -q`
+- 默认测试不得访问真实账号、真实站点或打开长期浏览器会话
+- `live` / `e2e` 测试必须显式设置 `XHS_LIVE_TEST=1` 后运行
+- 运行 `python -m pytest -q` 确认默认测试通过后再提交
+
+常用检查：
+
+```bash
+python -m scripts.docs_check
+python -m scripts.site_check
+python -m ruff check scripts tests
+python -m pytest -q
+```
+
+Windows PowerShell:
+
+```powershell
+.\make.ps1 check
+```
+
+只读 live 冒烟测试：
+
+```bash
+XHS_LIVE_TEST=1 python -m pytest tests/live -q -m live
+```
+
+Windows PowerShell：
+
+```powershell
+$env:XHS_LIVE_TEST='1'; python -m pytest tests/live -q -m live
+```
 
 ### Pull Request 检查清单
 
 - [ ] 代码符合 PEP 8 风格
 - [ ] 新功能有对应的测试用例
-- [ ] 所有测试通过（`pytest -v`）
+- [ ] 默认测试通过（`python -m pytest -q`）
+- [ ] 文档检查通过（`python -m scripts.docs_check`）
+- [ ] Pages 检查通过（`python -m scripts.site_check`）
+- [ ] Ruff 检查通过（`python -m ruff check scripts tests`）
+- [ ] 如果改了 CLI 输出字段，已同步 `scripts/output_contracts.py`
+- [ ] 如果改了浏览器选择器，已同步 `scripts/selectors.py`
 - [ ] 提交信息符合 Conventional Commits 规范
 - [ ] 如有破坏性变更，已在 PR 描述中说明
 - [ ] 没有引入新的第三方依赖（除非必要并已说明理由）
@@ -96,4 +131,4 @@ refactor: 提取公共的 xsec_token 校验逻辑
 - 就事论事，聚焦技术讨论
 - PR review 意见是对代码不对人
 
-感谢你的贡献！
+谢谢你的贡献。

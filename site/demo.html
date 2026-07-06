@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Xiaohongshu Skill Demo Outputs</title>
+    <meta name="description" content="Public demo outputs for xiaohongshu-skill, including search JSON, publish draft JSON, and agent contracts.">
+    <link rel="canonical" href="https://deliciousbuding.github.io/xiaohongshu-skill/demo.html">
+    <style>
+      :root {
+        --ink: #171717;
+        --muted: #5f6368;
+        --line: #d9dce1;
+        --panel: #f7f8fa;
+        --accent: #c91d2e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: #ffffff;
+        line-height: 1.5;
+      }
+      header, main, footer {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+      }
+      a { color: var(--accent); text-underline-offset: 3px; }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 42px;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+      .lead {
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+      }
+      section {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+      p {
+        color: var(--muted);
+      }
+      pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 6px;
+        background: #101418;
+        color: #edf2f7;
+        font: 13px/1.5 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+      footer {
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+      }
+      @media (max-width: 860px) {
+        .grid { grid-template-columns: 1fr; }
+        h1 { font-size: 34px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="./">xiaohongshu-skill</a>
+      <h1>Demo Outputs</h1>
+      <p class="lead">These examples are synthetic and safe for public docs. They show the JSON shape agents can parse without exposing account data, cookies, screenshots, or private paths.</p>
+    </header>
+    <main class="grid">
+      <section>
+        <h2>Search JSON</h2>
+        <p>A read-only search response contains `count` and `results`.</p>
+        <pre><code>{
+  "count": 1,
+  "results": [
+    {
+      "id": "note_demo_001",
+      "xsec_token": "xsec_demo_token",
+      "title": "上海咖啡地图",
+      "user": "demo_user"
+    }
+  ]
+}</code></pre>
+        <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/search-result.json">View fixture</a>
+      </section>
+      <section>
+        <h2>Publish Draft</h2>
+        <p>Publish commands stop at the publish button unless `--auto-publish` is set.</p>
+        <pre><code>{
+  "status": "ready",
+  "action": "publish_image",
+  "published": false,
+  "message": "Draft is ready and waiting at the publish button."
+}</code></pre>
+        <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/examples/demo/publish-ready.json">View fixture</a>
+      </section>
+      <section>
+        <h2>Agent Contracts</h2>
+        <p>Use these commands when wiring Codex, Claude Code, OpenClaw, Cursor, Cline, or n8n.</p>
+        <pre><code>xiaohongshu-skill contracts --command=search
+xiaohongshu-skill selectors --owner=publish
+python -m pytest tests/live -q -m live</code></pre>
+        <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md">Command reference</a>
+      </section>
+    </main>
+    <footer>
+      <p>Use a test account for live runs. Keep public issues free of cookies, profile links, QR codes, and local paths.</p>
+    </footer>
+  </body>
+</html>
