@@ -13,16 +13,24 @@ Python + Playwright 浏览器自动化。打开页面，从 `window.__INITIAL_ST
 
 ## 能做什么
 
-<!-- TODO: 录制搜索演示 GIF -->
 **搜。** 关键词全文搜索，排序、类型、时间、范围、地点随便筛。
-<!-- TODO: 录制发布演示 GIF -->
+
 **发。** 图文、视频、Markdown 转图片、长文。定时发、自动发都行。
-<!-- TODO: 录制互动演示 GIF -->
+
 **互动。** 评论、回复、点赞、收藏。内置人性化延迟，防封。
-<!-- TODO: 录制运营演示 GIF -->
+
 **运营。** 写作模板一键出稿，策略追踪每日配额，SOP 编排自动化。
 
+公开展示页：[GitHub Pages](https://deliciousbuding.github.io/xiaohongshu-skill/) · [Demo 输出](https://deliciousbuding.github.io/xiaohongshu-skill/demo.html)
+
 ## 安装
+
+| 入口 | 适合谁 | 命令 |
+|------|--------|------|
+| ClawHub | OpenClaw 用户 | `clawhub install xiaohongshu-skill` |
+| 全局 CLI | 想直接跑命令的人 | `pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git` |
+| Skill 目录 | Claude Code / Codex | `git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git <skills-dir>/xiaohongshu-skill` |
+| Docker | 想隔离运行环境的人 | `docker compose run --rm xiaohongshu qrcode --headless=false` |
 
 ```bash
 # 1. 安装
@@ -41,6 +49,14 @@ xiaohongshu-skill check-login
 ```
 
 装完就能用 `xiaohongshu-skill` 命令，不需要再从源码目录运行 `python -m scripts`。
+
+Docker 会从本仓库的 `Dockerfile` 本地构建，不依赖外部镜像：
+
+```bash
+git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
+cd xiaohongshu-skill
+docker compose run --rm xiaohongshu qrcode --headless=false
+```
 
 ## 功能详解
 
@@ -214,6 +230,7 @@ Python 3.10+，Playwright >= 1.40.0。
 - 安装：[docs/INSTALL.md](docs/INSTALL.md)
 - 平台集成：[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)
 - 安全和公开 issue 规则：[docs/SECURITY.md](docs/SECURITY.md)
+- 参考项目映射：[docs/REFERENCE.md](docs/REFERENCE.md)
 - GitHub Pages 和 SEO/GEO：[docs/PAGES.md](docs/PAGES.md)
 - 路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 - 公开 demo：[examples/demo](examples/demo)

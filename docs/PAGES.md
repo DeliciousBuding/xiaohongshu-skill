@@ -73,7 +73,6 @@ The file should include:
 
 - Page contains no private screenshots or local paths.
 - All links point to public repository paths.
-- `python -m scripts.docs_check` passes.
-- `python -m scripts.site_check` passes.
+- `python -m scripts.quality docs-check` passes.
 - `robots.txt` allows the static site.
 - `sitemap.xml` lists the landing page, demo page, and `llms.txt`.

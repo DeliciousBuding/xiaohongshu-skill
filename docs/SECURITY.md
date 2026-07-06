@@ -51,9 +51,8 @@ xsec_token-prefix...
 Run these before release:
 
 ```bash
-python -m scripts.docs_check
-python -m ruff check scripts tests
-python -m pytest -q
+python -m scripts.quality check
+python -m scripts.quality contracts
 ```
 
 `scripts.docs_check` scans public Markdown for private paths, common secret shapes, and writing patterns that should not ship.
@@ -61,5 +60,5 @@ python -m pytest -q
 Live and e2e tests are separate from release checks. Run them only with a test account:
 
 ```bash
-XHS_LIVE_TEST=1 python -m pytest tests/live -q -m live
+python -m scripts.quality live
 ```

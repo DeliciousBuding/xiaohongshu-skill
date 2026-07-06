@@ -13,22 +13,23 @@ Public GitHub data checked on 2026-07-06:
 | Project | Stars | Main lesson |
 | --- | ---: | --- |
 | `xpzouying/xiaohongshu-mcp` | 14.5k | Strong install paths, demos, MCP client guides, Docker release, FAQ, and community proof |
+| `iFurySt/RedNote-MCP` | 1.1k | NPM package path, MCP Inspector workflow, and concise client setup |
+| `autoclaw-cc/xiaohongshu-mcp-skills` | 231 | Task-focused Skill layout for OpenClaw users |
 | `DeliciousBuding/xiaohongshu-skill` | 32 | Smaller but broader CLI surface, with Skill-first packaging and Python automation |
-| `ibreez3/xiaohongshu-skill` | 20 | Confirms demand for Skill-style packaging |
 
 ## Borrow From Mature Projects
 
 ### Product entry points
 
-- Add a first-screen README choice: `Skill install`, `CLI install`, `Docker`, and `ClawHub`.
-- Replace TODO demo comments with short GIFs or linked GitHub user-attachment videos for login, search, publish, and interaction.
-- Add copy-paste examples for Claude Code, Codex, OpenClaw, Cursor, Cline, and n8n.
+- Keep the first-screen README choice for `Skill install`, `CLI install`, `Docker`, and `ClawHub`.
+- Add short privacy-reviewed GIFs or linked GitHub user-attachment videos for login, search, publish, and interaction.
+- Keep copy-paste examples for Claude Code, Codex, OpenClaw, Cursor, Cline, and n8n.
 - Add a small FAQ for login expiry, xsec_token freshness, account conflicts, captcha, and headed mode.
 
 ### Development
 
-- Keep `python -m pytest -q` under one second for unit tests.
-- Keep `python -m ruff check scripts tests` clean.
+- Keep `python -m scripts.quality check` fast enough for every PR.
+- Keep `python -m scripts.quality contracts` clean when output fields or browser selectors change.
 - Keep browser tests behind explicit `live` or `e2e` markers so CI never touches a real account by accident.
 - Keep `make.ps1` as the Windows entry for `test`, `lint`, `check`, `docs-check`, `live`, `site`, and `contracts`.
 
@@ -74,13 +75,13 @@ Public GitHub data checked on 2026-07-06:
 
 | Priority | Work item | Acceptance check |
 | --- | --- | --- |
-| P0 | Fast test harness and lint-clean tree | `python -m pytest -q` and `python -m ruff check scripts tests` pass |
+| P0 | Fast test harness and lint-clean tree | `python -m scripts.quality check` passes |
 | P0 | README install matrix | New users can choose Skill, CLI, Docker, or ClawHub in under one minute |
 | P0 | Public privacy guard | Docs and examples contain no local user paths, cookies, tokens, account names, or private screenshots |
 | P1 | Integration docs | Claude Code, Codex, OpenClaw, Cursor, Cline, n8n, and ClawHub each have a tested setup block |
 | P1 | Demo assets | Login, search, publish, and interaction have short public demos |
 | P1 | E2E test marker | Live account tests require `XHS_LIVE_TEST=1` |
-| P2 | GitHub Pages site | Landing page, SEO tags, structured data, and `llms.txt` are published |
+| P2 | GitHub Pages site | Landing page, SEO tags, structured data, and `llms.txt` stay published |
 | P2 | Account profiles | `--profile` and `profiles` are documented and covered by unit tests |
 
 ## Public Privacy Rule
@@ -88,7 +89,7 @@ Public GitHub data checked on 2026-07-06:
 Before committing public docs or examples, run:
 
 ```bash
-python -m scripts.docs_check
+python -m scripts.quality docs-check
 ```
 
 Allowed path examples must be generic. Use `/path/to/file`, `C:\path\to\file`, or `~/.xiaohongshu/` when a public setup needs a path.

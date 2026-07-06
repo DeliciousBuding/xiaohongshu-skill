@@ -13,16 +13,24 @@ Python + Playwright browser automation. Opens pages, pulls structured data from 
 
 ## What it does
 
-<!-- TODO: record search demo GIF -->
 **Search.** Full-text keyword search with sort order, note type, time range, scope, and location filters.
-<!-- TODO: record publishing demo GIF -->
+
 **Post.** Images, video, Markdown-to-image, long-form. Schedule or publish right now.
-<!-- TODO: record engagement demo GIF -->
-**Engage.** Comment, reply, like, bookmark. Human-like delays baked in so you stay under the radar.
-<!-- TODO: record operations demo GIF -->
+
+**Engage.** Comment, reply, like, bookmark. Human-paced delays are built in for account safety.
+
 **Automate.** Writing templates for instant drafts. Strategy tracker with daily quotas. SOP workflows on autopilot.
 
+Public site: [GitHub Pages](https://deliciousbuding.github.io/xiaohongshu-skill/) · [Demo outputs](https://deliciousbuding.github.io/xiaohongshu-skill/demo.html)
+
 ## Install
+
+| Entry | Best for | Command |
+|-------|----------|---------|
+| ClawHub | OpenClaw users | `clawhub install xiaohongshu-skill` |
+| Global CLI | Shell users | `pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git` |
+| Skill folder | Claude Code / Codex | `git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git <skills-dir>/xiaohongshu-skill` |
+| Docker | Isolated local runs | `docker compose run --rm xiaohongshu qrcode --headless=false` |
 
 ```bash
 # 1. Install
@@ -224,6 +232,7 @@ Universal approach: clone the repo into your platform's Skills directory. The AI
 - Install: [docs/INSTALL.md](docs/INSTALL.md)
 - Integrations: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)
 - Security and public issue rules: [docs/SECURITY.md](docs/SECURITY.md)
+- Reference project map: [docs/REFERENCE.md](docs/REFERENCE.md)
 - GitHub Pages and SEO/GEO: [docs/PAGES.md](docs/PAGES.md)
 - Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Public demos: [examples/demo](examples/demo)

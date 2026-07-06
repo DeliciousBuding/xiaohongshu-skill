@@ -282,16 +282,20 @@ const data = obj.value !== undefined ? obj.value : obj._value;
 │   ├── publish.py        # 发布（图文/视频/Markdown/长文 + 延迟）
 │   ├── templates.py      # 写作模板引擎
 │   ├── strategy.py       # 运营策略（配额/日历/定位）
+│   ├── selectors.py      # 浏览器选择器契约
+│   ├── output_contracts.py # CLI JSON 输出契约
+│   ├── quality.py        # 本地和 CI 质量门
 │   └── sop.py            # SOP 编排引擎
 └── tests/                # 单元测试
     ├── test_client.py
-    ├── test_login.py
+    ├── test_cli.py
     ├── test_search.py
-    ├── test_feed.py
-    ├── test_user.py
     ├── test_comment.py
     ├── test_interact.py
     ├── test_publish.py
+    ├── test_output_contracts.py
+    ├── test_quality.py
+    ├── test_selectors.py
     ├── test_templates.py
     ├── test_strategy.py
     └── test_sop.py

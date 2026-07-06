@@ -53,7 +53,9 @@ Docs:
 - Install: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md
 - Integrations: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md
 - Security: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/SECURITY.md
+- Reference project map: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/REFERENCE.md
 - Roadmap: https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/ROADMAP.md
+- Examples: https://github.com/DeliciousBuding/xiaohongshu-skill/tree/main/examples
 
 Demos:
 
