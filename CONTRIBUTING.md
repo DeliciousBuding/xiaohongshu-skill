@@ -87,10 +87,8 @@ refactor: 提取公共的 xsec_token 校验逻辑
 常用检查：
 
 ```bash
-python -m scripts.docs_check
-python -m scripts.site_check
-python -m ruff check scripts tests
-python -m pytest -q
+python -m scripts.quality check
+python -m scripts.quality contracts
 ```
 
 Windows PowerShell:
@@ -102,23 +100,20 @@ Windows PowerShell:
 只读 live 冒烟测试：
 
 ```bash
-XHS_LIVE_TEST=1 python -m pytest tests/live -q -m live
+python -m scripts.quality live
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:XHS_LIVE_TEST='1'; python -m pytest tests/live -q -m live
+.\make.ps1 live
 ```
 
 ### Pull Request 检查清单
 
 - [ ] 代码符合 PEP 8 风格
 - [ ] 新功能有对应的测试用例
-- [ ] 默认测试通过（`python -m pytest -q`）
-- [ ] 文档检查通过（`python -m scripts.docs_check`）
-- [ ] Pages 检查通过（`python -m scripts.site_check`）
-- [ ] Ruff 检查通过（`python -m ruff check scripts tests`）
+- [ ] 默认检查通过（`python -m scripts.quality check`）
 - [ ] 如果改了 CLI 输出字段，已同步 `scripts/output_contracts.py`
 - [ ] 如果改了浏览器选择器，已同步 `scripts/selectors.py`
 - [ ] 提交信息符合 Conventional Commits 规范

@@ -29,15 +29,5 @@ jobs:
           playwright install chromium
           playwright install-deps chromium
 
-      - name: 代码检查（ruff）
-        run: |
-          ruff check scripts/ tests/
-
-      - name: 公开文档检查
-        run: python -m scripts.docs_check
-
-      - name: Pages SEO/GEO 检查
-        run: python -m scripts.site_check
-
-      - name: 运行测试
-        run: pytest -q
+      - name: 质量检查
+        run: python -m scripts.quality check

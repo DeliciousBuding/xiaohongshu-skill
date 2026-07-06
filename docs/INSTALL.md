@@ -114,10 +114,8 @@ Optional local switches live in `.env.example`. Copy it to `.env` only for your 
 Default checks do not touch Xiaohongshu:
 
 ```bash
-python -m scripts.docs_check
-python -m scripts.site_check
-python -m ruff check scripts tests
-python -m pytest -q
+python -m scripts.quality check
+python -m scripts.quality contracts
 ```
 
 Windows PowerShell:
@@ -129,13 +127,13 @@ Windows PowerShell:
 Live browser checks are opt-in:
 
 ```bash
-XHS_LIVE_TEST=1 python -m pytest tests/live -q -m live
+python -m scripts.quality live
 ```
 
 PowerShell:
 
 ```powershell
-$env:XHS_LIVE_TEST='1'; python -m pytest tests/live -q -m live
+.\make.ps1 live
 ```
 
 ## Common Problems
