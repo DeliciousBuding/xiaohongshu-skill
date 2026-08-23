@@ -3,32 +3,90 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing semantic version tag to release, for example v1.5.0
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  UV_VERSION: "0.12.4"
+  UV_FROZEN: "1"
 
 jobs:
   release:
+    name: release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v7
-
-      - name: 设置 Python 3.11
-        uses: actions/setup-python@v6
+      - name: Checkout release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: ${{ env.UV_VERSION }}
           python-version: "3.11"
+          enable-cache: true
 
-      - name: 构建分发包
+      - name: Resolve release tag
+        id: release
+        shell: bash
         run: |
-          pip install build
-          python -m build
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: 上传到 Release
-        uses: softprops/action-gh-release@v2
+      - name: Sync development environment
+        run: uv sync --frozen --group dev
+
+      - name: Run release quality gates
+        run: uv run python -m scripts.quality check
+
+      - name: Verify tag and package versions
+        run: uv run python -m scripts.release_check "${{ steps.release.outputs.tag }}"
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Validate distribution metadata
+        run: uvx --from twine==7.0.0 twine check dist/*
+
+      - name: Install and smoke-test wheel
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          uv venv .smoke --python 3.11
+          uv pip install --python .smoke/bin/python dist/*.whl
+          test "$(.smoke/bin/xiaohongshu-skill --version)" = "xiaohongshu-skill ${RELEASE_TAG#v}"
+          .smoke/bin/xiaohongshu-skill --help >/dev/null
+
+      - name: Generate checksums
+        shell: bash
+        run: sha256sum dist/* > dist/SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
+          subject-path: "dist/*"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
           files: |
             dist/*.tar.gz
             dist/*.whl
+            dist/SHA256SUMS
           generate_release_notes: true
+          fail_on_unmatched_files: true

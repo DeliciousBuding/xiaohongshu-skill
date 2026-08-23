@@ -12,7 +12,6 @@ import pytest
 from scripts.search import search
 from scripts.test_gate import live_skip_reason, should_run_live_tests
 
-
 pytestmark = [
     pytest.mark.live,
     pytest.mark.e2e,

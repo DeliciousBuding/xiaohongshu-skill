@@ -15,22 +15,24 @@ import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-from . import __version__
-from .client import XiaohongshuClient, CaptchaError
-from .profiles import ProfileNameError, list_profiles, profile_paths
-from . import login
-from . import search
-from . import feed
-from . import user
-from . import comment
-from . import interact
-from . import explore
-from . import publish
+from . import (
+    __version__,
+    comment,
+    explore,
+    feed,
+    interact,
+    login,
+    publish,
+    search,
+    sop,
+    strategy,
+    templates,
+    user,
+)
+from .client import CaptchaError, XiaohongshuClient
 from .output_contracts import get_output_contracts
+from .profiles import ProfileNameError, list_profiles, profile_paths
 from .selectors import get_selector_contracts
-from . import templates
-from . import strategy
-from . import sop
 
 
 def format_output(data) -> str:

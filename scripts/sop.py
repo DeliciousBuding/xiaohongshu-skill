@@ -12,10 +12,10 @@
 import random
 import sys
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
+from .strategy import STRATEGY_FILE, StrategyManager
 from .templates import TemplateEngine, generate_template
-from .strategy import StrategyManager, STRATEGY_FILE
 
 
 class SOPEngine:

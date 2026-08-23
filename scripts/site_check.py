@@ -9,7 +9,6 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-
 REQUIRED_SITE_FILES = (
     "index.html",
     "demo.html",

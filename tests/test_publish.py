@@ -3,10 +3,11 @@
 """
 
 from unittest.mock import MagicMock, patch
+
 import pytest
 
-from scripts.publish import PublishAction
 from scripts.client import XiaohongshuClient
+from scripts.publish import PublishAction
 
 
 class TestNavigateToPublish:

@@ -6,14 +6,14 @@
 """
 
 import os
+import random
 import sys
 import time
-import random
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 from ._utils import is_element_blocked
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
 

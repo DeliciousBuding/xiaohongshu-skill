@@ -8,10 +8,9 @@ import json
 import sys
 import time
 import urllib.parse
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
-
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 # 筛选选项映射表（来自 Go 源码）
 FILTER_OPTIONS_MAP = {

@@ -8,9 +8,9 @@ import json
 import re
 import sys
 import time
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 
 class UserProfileAction:

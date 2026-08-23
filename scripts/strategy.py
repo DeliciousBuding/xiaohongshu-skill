@@ -8,8 +8,7 @@
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
-
+from typing import Any, Dict, List, Optional
 
 # 配置文件路径
 STRATEGY_DIR = os.path.expanduser("~/.xiaohongshu")

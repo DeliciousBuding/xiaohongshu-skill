@@ -4,7 +4,7 @@ import sys
 from scripts import quality
 
 
-def test_command_plan_check_reuses_docs_lint_and_tests():
+def test_command_plan_check_reuses_all_required_gates():
     plan = quality.command_plan("check")
 
     assert plan == [
@@ -12,6 +12,9 @@ def test_command_plan_check_reuses_docs_lint_and_tests():
         [sys.executable, "-m", "scripts.site_check"],
         [sys.executable, "-m", "ruff", "check", "scripts", "tests"],
         [sys.executable, "-m", "pytest", "-q"],
+        [sys.executable, "-m", "scripts", "contracts"],
+        [sys.executable, "-m", "scripts", "selectors"],
+        [sys.executable, "-m", "scripts.skill_check"],
     ]
 
 

@@ -4,8 +4,8 @@
 
 from unittest.mock import MagicMock, patch
 
-from scripts.comment import CommentAction, MAX_COMMENT_LENGTH
 from scripts.client import XiaohongshuClient
+from scripts.comment import MAX_COMMENT_LENGTH, CommentAction
 
 
 class TestValidateComment:

@@ -1,36 +1,40 @@
-"""
-xiaohongshu-skill
+"""Python package for the Xiaohongshu Agent Skill."""
 
-基于 xiaohongshu-mcp Go 源码翻译的 Python Playwright 实现
-"""
+from importlib.metadata import PackageNotFoundError, version
 
-from .client import XiaohongshuClient, create_client, DEFAULT_COOKIE_PATH
-from . import login
-from . import search
-from . import feed
-from . import user
-from . import comment
-from . import interact
-from . import explore
-from . import publish
-from . import templates
-from . import strategy
-from . import sop
+from . import (
+    comment,
+    explore,
+    feed,
+    interact,
+    login,
+    publish,
+    search,
+    sop,
+    strategy,
+    templates,
+    user,
+)
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient, create_client
 
-__version__ = "1.3.0"
+try:
+    __version__ = version("xiaohongshu-skill")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
+
 __all__ = [
-    "XiaohongshuClient",
-    "create_client",
     "DEFAULT_COOKIE_PATH",
-    "login",
-    "search",
-    "feed",
-    "user",
+    "XiaohongshuClient",
     "comment",
-    "interact",
+    "create_client",
     "explore",
+    "feed",
+    "interact",
+    "login",
     "publish",
-    "templates",
-    "strategy",
+    "search",
     "sop",
+    "strategy",
+    "templates",
+    "user",
 ]

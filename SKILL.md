@@ -1,10 +1,20 @@
 ---
 name: xiaohongshu-skill
-description: 小红书 / Xiaohongshu / RedNote AI Agent Skill。用 Python Playwright 搜笔记、读详情、抓推荐流、发图文/视频/长文/Markdown、评论点赞收藏、二维码登录、模板、策略和 SOP；默认 JSON 输出，写操作必须用户确认。适合 Claude Code、Codex、OpenClaw、ClawHub、skills.sh、Hermes Agent 和 AgentSkills。用户提到 xiaohongshu、小红书、rednote、RED、小红书搜索、发到小红书、小红书笔记分析、小红书运营、小红书自动化时触发。
-user-invokable: true
-metadata: {"openclaw": {"emoji": "📕", "requires": {"bins": ["python3", "playwright"], "anyBins": ["python3", "python"]}, "os": ["win32", "linux", "darwin"], "install": [{"id": "pip", "kind": "node", "label": "Install dependencies (pip)", "bins": ["playwright"]}]}}
+description: 小红书 / Xiaohongshu / RedNote AI Agent Skill。用 Python Playwright 搜索和读取内容、管理登录会话、发布图文/视频/长文、评论、点赞和收藏；默认输出 JSON，任何写操作都必须先获得用户确认。用户提到 xiaohongshu、小红书、rednote、小红书搜索、发到小红书、小红书笔记分析、小红书运营或小红书自动化时触发。
+license: MIT
+compatibility: Requires Python 3.10 or newer and Playwright Chromium. Supports Windows, macOS, and Linux.
+metadata:
+  openclaw:
+    emoji: "📕"
+    requires:
+      anyBins:
+        - python3
+        - python
+    os:
+      - win32
+      - linux
+      - darwin
 ---
-
 # 小红书 Skill
 
 用 Python Playwright 驱动浏览器操作小红书。数据从 `window.__INITIAL_STATE__`（Vue SSR 状态对象）里取。搜索、发布、互动、运营全在这。
