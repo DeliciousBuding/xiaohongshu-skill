@@ -1,95 +1,36 @@
-# Project Roadmap
+# Roadmap
 
-Last updated: 2026-07-06
+The project prioritizes correctness and account safety over protocol count or automation volume.
 
-This roadmap turns the current project review into work items. It uses public facts only. Do not add local paths, cookies, account names, tokens, screenshots with personal data, or machine-specific setup details.
+## Current priorities
 
-## Current Position
+1. Keep login, selector, and publish behavior resilient to page changes.
+2. Preserve reproducible Python, package, and Docker builds.
+3. Maintain stable JSON and selector contracts for agent integrations.
+4. Keep session data private, backward-compatible, and recoverable.
+5. Require explicit confirmation before account-mutating operations.
 
-`xiaohongshu-skill` is a Python Playwright CLI and AgentSkill for Xiaohongshu. It already covers search, note detail, user pages, explore feed, publish flows, comments, likes, collects, templates, strategy state, and SOP commands.
+## Planned improvements
 
-Public GitHub data checked on 2026-07-06:
+### Browser fixtures
 
-| Project | Stars | Main lesson |
-| --- | ---: | --- |
-| `xpzouying/xiaohongshu-mcp` | 14.5k | Strong install paths, demos, MCP client guides, Docker release, FAQ, and community proof |
-| `iFurySt/RedNote-MCP` | 1.1k | NPM package path, MCP Inspector workflow, and concise client setup |
-| `autoclaw-cc/xiaohongshu-mcp-skills` | 231 | Task-focused Skill layout for OpenClaw users |
-| `DeliciousBuding/xiaohongshu-skill` | 32 | Smaller but broader CLI surface, with Skill-first packaging and Python automation |
+Add sanitized HTML and state fixtures for extraction logic so more browser behavior can be tested without live network access.
 
-## Borrow From Mature Projects
+### Mutation safety
 
-### Product entry points
+Evaluate a structured preview and explicit execution flag for account-mutating CLI commands in the next major version. Existing 1.x command behavior remains compatible.
 
-- Keep the first-screen README choice for `Skill install`, `CLI install`, `Docker`, and `ClawHub`.
-- Add short privacy-reviewed GIFs or linked GitHub user-attachment videos for login, search, publish, and interaction.
-- Keep copy-paste examples for Claude Code, Codex, OpenClaw, Cursor, Cline, and n8n.
-- Add a small FAQ for login expiry, xsec_token freshness, account conflicts, captcha, and headed mode.
+### Package layout
 
-### Development
+Move from the generic `scripts` package to `src/xiaohongshu_skill` only in a major release with import compatibility shims.
 
-- Keep `python -m scripts.quality check` fast enough for every PR.
-- Keep `python -m scripts.quality contracts` clean when output fields or browser selectors change.
-- Keep browser tests behind explicit `live` or `e2e` markers so CI never touches a real account by accident.
-- Keep `make.ps1` as the Windows entry for `test`, `lint`, `check`, `docs-check`, `live`, `site`, and `contracts`.
+### Optional integrations
 
-### Testing
+Add service protocols such as MCP or REST only when a concrete integration cannot use the current JSON CLI contract.
 
-- Unit tests should mock Playwright and never wait through production humanized delays.
-- Live tests must require explicit environment variables such as `XHS_LIVE_TEST=1`.
-- Keep selector contract tests for publish, search, comments, interaction, captcha, and login. They should validate fallback order without opening Xiaohongshu.
-- Keep CLI JSON output contracts in `scripts/output_contracts.py` so agents can rely on stable fields.
+## Non-goals
 
-### Browser automation
-
-- Keep persistent browser profiles per account. Shared sessions cause account conflicts.
-- Use `--profile` for separate account sessions. `profiles` lists local profiles. Later work can add `add`, `switch`, and `set-default`.
-- Prefer page objects for search, publish, comments, and profile flows. Shared helpers should cover navigation, toast parsing, captcha detection, and retries.
-- Document every selector group in `scripts/selectors.py` with the page it belongs to and the fallback order.
-
-### Safety and platform limits
-
-- Treat anti-bot work as reliability and account-safety work, not as a promise to bypass platform controls.
-- Keep navigation pacing, interaction pacing, burst cooldowns, captcha detection, and `auto_publish=false` defaults.
-- Add per-action daily limits to the CLI, not only the strategy helpers.
-- Stop a run when the site asks for verification. Return a structured `CaptchaError` and tell the user to continue in headed mode.
-
-### Documentation
-
-- Keep `README.md` short enough to sell the project and get a user to the first command.
-- Move long command details to `docs/API.md`.
-- Add `docs/INSTALL.md` for Windows, macOS, Linux, Docker, and WSL.
-- Add `docs/INTEGRATIONS.md` for Claude Code, Codex, OpenClaw, Cursor, Cline, n8n, and ClawHub.
-- Add `docs/SECURITY.md` for cookies, local browser profiles, screenshots, logs, and issue-report redaction.
-
-### GitHub Pages, SEO, and GEO
-
-- Build a static landing page with one job: explain what the Skill does and get the user to install it.
-- Use a plain title: `Xiaohongshu Skill for AI Agents`.
-- Add a short meta description that includes `Xiaohongshu`, `RedNote`, `小红书`, `AI agent`, `Playwright`, and `AgentSkill`.
-- Add structured data with `SoftwareApplication`, install commands, license, repository URL, and supported OS names.
-- Publish examples as crawlable pages, not only images inside README.
-- Add `llms.txt` with install commands, command list, safety rules, and links to API docs.
-
-## Priority Plan
-
-| Priority | Work item | Acceptance check |
-| --- | --- | --- |
-| P0 | Fast test harness and lint-clean tree | `python -m scripts.quality check` passes |
-| P0 | README install matrix | New users can choose Skill, CLI, Docker, or ClawHub in under one minute |
-| P0 | Public privacy guard | Docs and examples contain no local user paths, cookies, tokens, account names, or private screenshots |
-| P1 | Integration docs | Claude Code, Codex, OpenClaw, Cursor, Cline, n8n, and ClawHub each have a tested setup block |
-| P1 | Demo assets | Login, search, publish, and interaction have short public demos |
-| P1 | E2E test marker | Live account tests require `XHS_LIVE_TEST=1` |
-| P2 | GitHub Pages site | Landing page, SEO tags, structured data, and `llms.txt` stay published |
-| P2 | Account profiles | `--profile` and `profiles` are documented and covered by unit tests |
-
-## Public Privacy Rule
-
-Before committing public docs or examples, run:
-
-```bash
-python -m scripts.quality docs-check
-```
-
-Allowed path examples must be generic. Use `/path/to/file`, `C:\path\to\file`, or `~/.xiaohongshu/` when a public setup needs a path.
+- Bulk scraping or high-volume account automation.
+- Automatic captcha bypass.
+- Silent publish success after an unconfirmed submission.
+- Copying large-project release or community automation without a local need.

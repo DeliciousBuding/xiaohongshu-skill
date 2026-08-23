@@ -1,42 +1,38 @@
-# Reference Project Map
+# Reference implementations
 
-Last updated: 2026-07-06
+This project studies mature Xiaohongshu automation projects for domain behavior and failure modes. It does not copy their product scope or operational complexity by default.
 
-This file records what the project borrows from nearby Xiaohongshu and RedNote automation projects. It uses public repository facts only.
+## Adoption rule
 
-## Repositories Checked
+A reference is adopted only when all of the following are recorded:
 
-| Project | Public signal checked on 2026-07-06 | What to borrow |
-| --- | ---: | --- |
-| `xpzouying/xiaohongshu-mcp` | 14.5k stars, 2.1k forks | Clear install choices, client setup examples, Docker path, FAQ, public demos, contributor credit |
-| `iFurySt/RedNote-MCP` | 1.1k stars, 173 forks | NPM-style quick start, MCP Inspector workflow, simple Cursor config |
-| `autoclaw-cc/xiaohongshu-mcp-skills` | 231 stars, 43 forks | Skill split by task area and OpenClaw install notes |
-| `DeliciousBuding/xiaohongshu-skill` | 32 stars, 8 forks | Skill-first Python CLI with publish, interaction, templates, strategy, and SOP commands |
+1. The local problem it solves.
+2. The upstream symbol, tag, or commit used for comparison.
+3. The local adaptation and intentional differences.
+4. An automated test that protects the adopted behavior.
+5. The applicable license and attribution.
 
-## Adopted Here
+Repository popularity is not an architectural requirement and is intentionally not recorded here.
 
-- Four entry paths in README: ClawHub, global CLI, local Skill folder, Docker.
-- Public Pages site with demo JSON, `robots.txt`, `sitemap.xml`, and `llms.txt`.
-- Selector and output contracts for agent integrations.
-- Profile isolation for machines that operate more than one account.
-- Small examples for Cursor, n8n, and OpenClaw.
-- Live tests gated by `XHS_LIVE_TEST=1`.
-- Public documentation checks for private paths, tokens, cookies, and writing patterns.
-- GitHub Actions for CI and Pages deployment.
+## Primary domain reference
 
-## Next Candidates
+`xpzouying/xiaohongshu-mcp` is the primary behavioral reference for browser session, login, publishing, and interaction edge cases.
 
-| Candidate | Why it helps | Safe first step |
-| --- | --- | --- |
-| Client setup snippets | Users copy config faster when examples match their agent | Add or extend examples for Cline and more agent shells |
-| Demo media | Mature projects show real workflows in one glance | Add synthetic or redacted GIFs only after privacy review |
-| Release artifacts | Binary and package releases reduce setup friction | Add a release checklist before adding publishing automation |
-| Community examples | More examples make the repo easier to trust | Add a `showcases` section that accepts PRs without private screenshots |
-| HTTP/MCP wrapper | Some clients cannot use local Skills directly | Design it as a separate optional layer, not a rewrite of the CLI |
+Adapted behaviors include:
 
-## Not Copied
+- Loading and saving cookies across the browser context.
+- Stable per-session browser fingerprint input.
+- New and legacy publish control handling.
+- Confirmation after publish submission instead of trusting the click alone.
+- Bounded validation for publish inputs and schedules.
+- Captcha and security-verification detection.
 
-- Real account screenshots, QR codes, group QR codes, and local user paths.
-- Claims about account safety that cannot be verified for every user.
-- Bulk scraping examples or prompts that encourage abuse.
-- A hard dependency on MCP. The current project remains a Skill and CLI first.
+The Python implementation keeps a CLI-first product shape and Playwright persistent contexts. It does not currently adopt the upstream MCP server, REST server, binary release matrix, registry publishing pipeline, or browser auto-update workflow.
+
+## Skill standards
+
+The root `SKILL.md` follows the Agent Skills specification and carries a compatible OpenClaw metadata extension. CI validates the standard frontmatter using the official reference package.
+
+## License attribution
+
+Some modules were adapted from Apache-2.0-licensed reference code. See `THIRD_PARTY_NOTICES.md` and `licenses/Apache-2.0.txt`. Original project contributions remain under the repository `LICENSE` unless a file states otherwise.
