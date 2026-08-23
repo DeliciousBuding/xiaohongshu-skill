@@ -17,6 +17,7 @@ from scripts.selectors import (
     INTERACT_LIKE_ACTIVE_CONTRACT,
     INTERACT_LIKE_BUTTON_CONTRACT,
     INTERACT_RATE_LIMIT_TOAST_CONTRACT,
+    LOGIN_CREATOR_READY_CONTRACT,
     LOGIN_PROFILE_LINK_CONTRACT,
     LOGIN_QRCODE_CONTRACT,
     REQUIRED_CONTRACT_NAMES,
@@ -81,6 +82,7 @@ def test_runtime_selector_constants_derive_from_registry_contracts():
 
     assert LoginAction.QRCODE_SELECTOR == LOGIN_QRCODE_CONTRACT.primary
     assert LoginAction.PROFILE_LINK_SELECTOR == LOGIN_PROFILE_LINK_CONTRACT.primary
+    assert LoginAction.CREATOR_READY_SELECTORS == LOGIN_CREATOR_READY_CONTRACT.selectors
     assert InteractAction.LIKE_SELECTOR == INTERACT_LIKE_BUTTON_CONTRACT.primary
     assert InteractAction.LIKE_ACTIVE_SELECTOR == INTERACT_LIKE_ACTIVE_CONTRACT.primary
     assert InteractAction.COLLECT_SELECTOR == INTERACT_COLLECT_BUTTON_CONTRACT.primary
@@ -128,8 +130,22 @@ def test_selector_cli_keeps_runtime_binding_details_private(capsys):
 
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["count"] == 2
+    assert payload["count"] == 3
     assert all(
         set(contract) == {"name", "owner", "purpose", "selectors", "required"}
         for contract in payload["contracts"]
+    )
+
+def test_login_creator_ready_contract_is_registered():
+    """The Creator Center ready candidates are registered as a named contract."""
+    contract = get_selector_contract("login.creator_ready")
+
+    assert contract.owner == "login"
+    assert contract.selectors == ("div.upload-content", "div.creator-tab", 'input[type="file"]')
+
+
+def test_profile_link_contract_uses_precise_channel_selector():
+    """The profile link contract uses the precise channel-anchored selector."""
+    assert LOGIN_PROFILE_LINK_CONTRACT.primary == (
+        'a.link-wrapper[href^="/user/profile/"]:has(span.channel)'
     )

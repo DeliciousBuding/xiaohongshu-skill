@@ -11,6 +11,7 @@ import time
 from typing import Any, Dict, Optional
 
 from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
+from .login import MAIN_PROFILE_SELECTOR
 
 
 class UserProfileAction:
@@ -188,45 +189,17 @@ class UserProfileAction:
 
         page = client.page
 
-        # 尝试从侧边栏获取自己的用户 ID
-        my_user_id = page.evaluate("""() => {
-            // 方法 1: 从侧边栏用户链接提取
-            var links = document.querySelectorAll('a[href*="/user/profile/"]');
-            for (var i = 0; i < links.length; i++) {
-                var href = links[i].getAttribute('href');
-                var match = href.match(/\\/user\\/profile\\/([a-f0-9]+)/);
-                if (match) return match[1];
-            }
-            // 方法 2: 从 __INITIAL_STATE__ 提取
-            if (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.user) {
-                var user = window.__INITIAL_STATE__.user;
-                if (user.userPageData) {
-                    var data = user.userPageData.value || user.userPageData._value || user.userPageData;
-                    if (data && data.basicInfo && data.basicInfo.userId) {
-                        return data.basicInfo.userId;
-                    }
-                }
-            }
-            return '';
-        }""")
-
-        if not my_user_id:
-            # 回退：点击侧边栏的个人头像/链接
-            try:
-                avatar = page.locator('.sidebar-nav .user-avatar, .side-bar .user-wrap a, a.user-link')
-                if avatar.count() > 0:
-                    avatar.first.click()
-                    time.sleep(2)
-                    # 从跳转后的 URL 提取用户 ID
-                    match = re.search(r'/user/profile/([a-f0-9]+)', page.url)
-                    if match:
-                        my_user_id = match.group(1)
-            except Exception as e:
-                print(f"通过侧边栏获取用户ID失败: {e}", file=sys.stderr)
-
-        if not my_user_id:
+        profile_link = page.locator(MAIN_PROFILE_SELECTOR)
+        if profile_link.count() == 0 or not profile_link.first.is_visible():
             print("无法获取当前登录用户的 ID", file=sys.stderr)
             return None
+
+        href = profile_link.first.get_attribute("href")
+        match = re.search(r"/user/profile/([a-f0-9]+)", href or "")
+        if match is None:
+            print("无法获取当前登录用户的 ID", file=sys.stderr)
+            return None
+        my_user_id = match.group(1)
 
         print(f"获取到用户 ID: {my_user_id}", file=sys.stderr)
         return self.get_user_profile(my_user_id)

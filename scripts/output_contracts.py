@@ -41,6 +41,19 @@ OUTPUT_CONTRACTS: tuple[OutputContract, ...] = (
         required_fields=("is_logged_in", "username"),
     ),
     OutputContract(
+        name="creator_login.result",
+        command="creator-login",
+        purpose="Creator Center interactive login result",
+        required_fields=("status", "message"),
+        notes="status is one of logged_in, login_required, or timeout",
+    ),
+    OutputContract(
+        name="check_creator_login.status",
+        command="check-creator-login",
+        purpose="Creator Center login status",
+        required_fields=("is_logged_in",),
+    ),
+    OutputContract(
         name="profiles.list",
         command="profiles",
         purpose="Local account profile inventory",

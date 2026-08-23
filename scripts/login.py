@@ -13,12 +13,21 @@ from typing import Any, Dict, Optional, Tuple
 
 from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 from .profiles import env_profile, profile_paths
-from .selectors import LOGIN_PROFILE_LINK_CONTRACT, LOGIN_QRCODE_CONTRACT
+from .selectors import (
+    LOGIN_CREATOR_READY_CONTRACT,
+    LOGIN_PROFILE_LINK_CONTRACT,
+    LOGIN_QRCODE_CONTRACT,
+)
 
 # QRCode 图片保存目录 - 放在 skill 文件夹内
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 QRCODE_DIR = os.path.join(SKILL_DIR, "data")
 QRCODE_PATH = os.path.join(QRCODE_DIR, "qrcode.png")
+
+# Creator Center login and publish detection.
+CREATOR_PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
+CREATOR_AUTH_URL_MARKERS = ("/login", "/captcha", "verify")
+MAIN_PROFILE_SELECTOR = LOGIN_PROFILE_LINK_CONTRACT.primary
 
 
 class LoginAction:
@@ -26,69 +35,72 @@ class LoginAction:
 
     QRCODE_SELECTOR = LOGIN_QRCODE_CONTRACT.primary
     PROFILE_LINK_SELECTOR = LOGIN_PROFILE_LINK_CONTRACT.primary
+    CREATOR_READY_SELECTORS = LOGIN_CREATOR_READY_CONTRACT.selectors
 
     def __init__(self, client: XiaohongshuClient):
         self.client = client
 
     def check_login_status(self, navigate: bool = True) -> Tuple[bool, Optional[str]]:
-        """
-        检查登录状态
-
-        Args:
-            navigate: 是否先导航到首页。
-                      如果已经在首页上，设 False 避免刷新页面。
-
-        Returns:
-            (是否已登录, 用户名)
-        """
+        """Return whether the account is logged in from live page state."""
         page = self.client.page
 
         if navigate:
             self.client.navigate("https://www.xiaohongshu.com/explore")
             time.sleep(3)
 
-        # ---- 方式 1：检测页面上是否弹出了登录弹窗 ----
-        # 如果弹窗的二维码区域可见 → 未登录
-        try:
-            qr = page.locator(self.QRCODE_SELECTOR)
-            if qr.count() > 0 and qr.first.is_visible():
-                return False, None
-        except Exception:
-            pass
+        # QR modal visible -> logged out
+        qr = page.locator(self.QRCODE_SELECTOR)
+        if qr.count() > 0 and qr.first.is_visible():
+            return False, None
 
-        # ---- 方式 2：检查 cookie 里是否包含 web_session ----
-        try:
-            cookies = self.client.context.cookies()
-            has_session = any(c['name'] == 'web_session' for c in cookies)
-            if has_session:
-                # 尝试获取用户名
-                username = self._try_get_username()
-                return True, username or "已登录用户"
-        except Exception:
-            pass
-
-        # ---- 方式 3：检查 HTML 里有没有用户头像链接（登录后才有） ----
-        try:
-            # 侧边栏会有 /user/profile/xxx 的链接
-            profile_link = page.locator(self.PROFILE_LINK_SELECTOR)
-            if profile_link.count() > 0:
-                username = self._try_get_username()
-                return True, username or "已登录用户"
-        except Exception:
-            pass
+        # Sidebar profile link visible -> logged in
+        profile_link = page.locator(self.PROFILE_LINK_SELECTOR)
+        if profile_link.count() > 0 and profile_link.first.is_visible():
+            return True, "已登录用户"
 
         return False, None
 
-    def _try_get_username(self) -> Optional[str]:
-        """尝试从页面提取用户昵称"""
-        try:
-            name = self.client.page.evaluate("""() => {
-                const el = document.querySelector('.user .name, .sidebar .user-name, [class*="nickname"]');
-                return el ? el.textContent.trim() : '';
-            }""")
-            return name if name else None
-        except Exception:
-            return None
+    def check_creator_login_status(self, navigate: bool = True) -> bool:
+        """Return whether the Creator Center shows an authenticated page."""
+        if navigate:
+            self.client.navigate(CREATOR_PUBLISH_URL)
+            time.sleep(3)
+
+        if self._is_creator_auth_page():
+            return False
+
+        if self._any_creator_ready_visible():
+            return True
+
+        url = (self.client.page.url or "").lower()
+        return url.startswith("https://creator.xiaohongshu.com")
+
+    def _is_creator_auth_page(self) -> bool:
+        """Return True when still on the Creator Center login or captcha page."""
+        url = (self.client.page.url or "").lower()
+        return any(marker in url for marker in CREATOR_AUTH_URL_MARKERS)
+
+    def _any_creator_ready_visible(self) -> bool:
+        """Return True when any Creator Center ready candidate is visible."""
+        page = self.client.page
+        for selector in self.CREATOR_READY_SELECTORS:
+            try:
+                loc = page.locator(selector)
+                if loc.count() > 0 and loc.first.is_visible():
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def wait_for_creator_login(self, timeout: int = 240) -> bool:
+        """Wait for the user to complete Creator Center login in a browser."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.check_creator_login_status(navigate=False):
+                self.client._save_cookies()
+                return True
+            time.sleep(2)
+        return False
 
     def get_wechat_qrcode(self) -> Tuple[Optional[str], bool]:
         """
@@ -174,28 +186,15 @@ class LoginAction:
                 print(f"  等待中... 还剩 {remaining} 秒", file=sys.stderr)
             time.sleep(2)
 
-        # ---- 阶段 2: 开始轮询检测 web_session cookie ----
+        # ---- 阶段 2: 开始轮询页面认证状态 ----
         print("开始检测登录状态...", file=sys.stderr)
         while time.time() - start < timeout:
-            try:
-                cookies = self.client.context.cookies()
-                has_session = any(c['name'] == 'web_session' for c in cookies)
-                if has_session:
-                    print("检测到 web_session cookie，登录成功！", file=sys.stderr)
-                    # 等待页面完成登录流程（写入 localStorage/sessionStorage）
-                    # 持久化上下文需要这些状态才能在下次启动时保持登录
-                    print("等待页面完成登录初始化...", file=sys.stderr)
-                    time.sleep(5)
-                    # 导航到首页确保登录状态完全生效
-                    try:
-                        self.client.page.goto("https://www.xiaohongshu.com/explore", wait_until="networkidle", timeout=15000)
-                        time.sleep(3)
-                    except Exception:
-                        time.sleep(3)
-                    self.client._save_cookies()
-                    return True
-            except Exception:
-                pass
+            is_logged_in, _ = self.check_login_status(navigate=False)
+            if is_logged_in:
+                print("检测到主站已登录！", file=sys.stderr)
+                time.sleep(5)
+                self.client._save_cookies()
+                return True
 
             elapsed = int(time.time() - start)
             remaining = timeout - elapsed
@@ -218,6 +217,40 @@ def check_login(
         client.start()
         action = LoginAction(client)
         return action.check_login_status(navigate=True)
+    finally:
+        client.close()
+
+
+def check_creator_login(
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+    headless: bool = True,
+) -> bool:
+    """Return whether the Creator Center is logged in."""
+    client = XiaohongshuClient(headless=headless, cookie_path=cookie_path)
+    try:
+        client.start()
+        return LoginAction(client).check_creator_login_status(navigate=True)
+    finally:
+        client.close()
+
+
+def creator_login(
+    headless: bool = False,
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+    timeout: int = 240,
+) -> Dict[str, Any]:
+    """Open the Creator Center and wait for phone-number login."""
+    client = XiaohongshuClient(headless=headless, cookie_path=cookie_path)
+    try:
+        client.start()
+        action = LoginAction(client)
+        if action.check_creator_login_status(navigate=True):
+            return {"status": "logged_in", "message": "创作者中心已登录"}
+        if headless:
+            return {"status": "login_required", "message": "创作者中心需要可见浏览器登录，请使用 --headless=false"}
+        if action.wait_for_creator_login(timeout=timeout):
+            return {"status": "logged_in", "message": "创作者中心登录成功"}
+        return {"status": "timeout", "message": "创作者中心登录超时"}
     finally:
         client.close()
 

@@ -44,7 +44,13 @@ LOGIN_PROFILE_LINK_CONTRACT = SelectorContract(
     name="login.profile_link",
     owner="login",
     purpose="Detect a logged-in profile link",
-    selectors=('a[href*="/user/profile/"]',),
+    selectors=('a.link-wrapper[href^="/user/profile/"]:has(span.channel)',),
+)
+LOGIN_CREATOR_READY_CONTRACT = SelectorContract(
+    name="login.creator_ready",
+    owner="login",
+    purpose="Detect an authenticated Creator Center publish page",
+    selectors=("div.upload-content", "div.creator-tab", 'input[type="file"]'),
 )
 INTERACT_LIKE_BUTTON_CONTRACT = SelectorContract(
     name="interact.like_button",
@@ -92,6 +98,7 @@ INTERACT_RATE_LIMIT_TOAST_CONTRACT = SelectorContract(
 SELECTOR_CONTRACTS: tuple[SelectorContract, ...] = (
     LOGIN_QRCODE_CONTRACT,
     LOGIN_PROFILE_LINK_CONTRACT,
+    LOGIN_CREATOR_READY_CONTRACT,
     SelectorContract(
         name="search.filter_button",
         owner="search",
@@ -245,6 +252,12 @@ def validate_runtime_selector_bindings() -> list[str]:
             LoginAction.PROFILE_LINK_SELECTOR,
             LOGIN_PROFILE_LINK_CONTRACT.primary,
             "LoginAction.PROFILE_LINK_SELECTOR",
+        ),
+        (
+            LOGIN_CREATOR_READY_CONTRACT,
+            LoginAction.CREATOR_READY_SELECTORS,
+            LOGIN_CREATOR_READY_CONTRACT.selectors,
+            "LoginAction.CREATOR_READY_SELECTORS",
         ),
         (
             INTERACT_LIKE_BUTTON_CONTRACT,
