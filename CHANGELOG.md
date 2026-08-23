@@ -6,6 +6,14 @@ version source of truth in `pyproject.toml`.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.5.1] - 2026-08-24
+
+### Changed
+
+- Relicensed the project from MIT to Apache-2.0. The copyright holder is now
+  `DeliciousBuding`. Module docstrings use neutral Apache-2.0 attribution and
+  point to `THIRD_PARTY_NOTICES.md`.
+
 ## [1.5.0] - 2026-08-24
 
 ### Added

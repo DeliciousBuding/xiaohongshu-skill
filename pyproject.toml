@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xiaohongshu-skill"
-version = "1.5.0"
+version = "1.5.1"
 description = "Xiaohongshu AI Agent toolkit for search, publishing, interaction, and content workflows"
 readme = "README.md"
 license = "Apache-2.0"
