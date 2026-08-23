@@ -3,7 +3,7 @@
 [![CI](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/DeliciousBuding/xiaohongshu-skill)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
 
 A Xiaohongshu browser toolkit for AI agents and command-line users. The Python Playwright implementation supports discovery, note details, feeds, login, publishing, comments, likes, collections, templates, strategy state, and SOP workflows.
 
@@ -164,6 +164,6 @@ CI also tests Python 3.10, 3.11, and 3.12, builds wheel and source distributions
 
 ## Sources and license
 
-Original repository code is distributed under the [MIT License](LICENSE). Some browser behavior was studied or adapted from the Apache-2.0 project `xpzouying/xiaohongshu-mcp`; see [third-party notices](THIRD_PARTY_NOTICES.md).
+Original repository code is distributed under the [Apache License 2.0](LICENSE). Some browser behavior was studied or adapted from the Apache-2.0 project `xpzouying/xiaohongshu-mcp`; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
 This project is not affiliated with or endorsed by Xiaohongshu. Users are responsible for applicable platform rules, laws, and account safety.
