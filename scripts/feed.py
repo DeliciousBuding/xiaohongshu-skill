@@ -1,7 +1,7 @@
 """
 小红书笔记详情模块
 
-基于 xiaohongshu-mcp/feed_detail.go 翻译
+Reference: xiaohongshu-mcp/feed_detail.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 """
 
 import json

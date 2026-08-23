@@ -1,7 +1,7 @@
 """
 小红书搜索模块
 
-基于 xiaohongshu-mcp/search.go 翻译
+Reference: xiaohongshu-mcp/search.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 """
 
 import json

@@ -2,7 +2,7 @@
 """
 小红书 CLI 入口
 
-基于 xiaohongshu-mcp 翻译
+Reference: xiaohongshu-mcp (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 """
 
 import argparse

@@ -1,7 +1,7 @@
 """
 小红书用户主页模块
 
-基于 xiaohongshu-mcp/user_profile.go 翻译
+Reference: xiaohongshu-mcp/user_profile.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 """
 
 import json

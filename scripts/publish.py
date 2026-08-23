@@ -1,7 +1,7 @@
 """
 小红书发布模块（图文 + 视频）
 
-基于 xiaohongshu-mcp/publish.go + publish_video.go 翻译
+Reference: xiaohongshu-mcp/publish.go + publish_video.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 安全发布校验（人工确认 checkpoint）
 """
 

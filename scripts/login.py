@@ -1,7 +1,7 @@
 """
 小红书登录模块
 
-基于 xiaohongshu-mcp/login.go 翻译
+Reference: xiaohongshu-mcp/login.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 支持生成微信登录二维码，保存供主模型发送
 """
 
