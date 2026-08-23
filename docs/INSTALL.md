@@ -1,41 +1,37 @@
 # Install
 
-Last updated: 2026-07-06
-
-This guide covers local CLI, Skill, Docker, and platform setup. Use a test account first. Xiaohongshu can ask for manual verification, and the tool will stop when that happens.
+This guide covers the local CLI, Agent Skill installation, Docker, account profiles, and development setup.
 
 ## Requirements
 
-- Python 3.10 or newer
+- Python 3.10, 3.11, or 3.12
+- `uv` for the reproducible local environment
 - Playwright Chromium
-- A Xiaohongshu account that can log in on the web
+- A Xiaohongshu account that can use the web interface
+
+Use a dedicated test account before relying on any write command.
 
 ## Local CLI
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-playwright install chromium
-python -m scripts qrcode --headless=false
-python -m scripts check-login
+git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
+cd xiaohongshu-skill
+uv sync --frozen --no-dev
+uv run playwright install chromium
 ```
 
-On macOS or Linux:
+On Linux, install browser system dependencies with:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
-python -m scripts qrcode --headless=false
-python -m scripts check-login
+uv run playwright install --with-deps chromium
 ```
 
-For Linux servers, install browser dependencies once:
+Login and verify:
 
 ```bash
-playwright install-deps chromium
+uv run python -m scripts qrcode --headless=false
+uv run python -m scripts check-login
+uv run python -m scripts search "咖啡" --limit=3
 ```
 
 ## Global CLI
@@ -44,115 +40,96 @@ playwright install-deps chromium
 pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
 playwright install chromium
 xiaohongshu-skill qrcode --headless=false
-xiaohongshu-skill search "美食" --limit=5
+xiaohongshu-skill search "咖啡" --limit=3
 ```
+
+The cloned `uv.lock` path is recommended for development and reproducible local runs. The global Git installation is a convenience path.
+
+## Agent Skill
+
+Recommended cross-platform installation:
+
+```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
+```
+
+ClawHub:
+
+```bash
+clawhub install xiaohongshu-skill
+```
+
+Manual folders:
+
+```text
+Claude Code: ~/.claude/skills/xiaohongshu-skill
+Codex/Cursor shared view: ~/.agents/skills/xiaohongshu-skill
+```
+
+After cloning into a Skill folder, install Python dependencies from that folder and restart the agent host if it does not reload Skill metadata automatically.
 
 ## Docker
 
 ```bash
 docker compose build
 docker compose run --rm xiaohongshu qrcode --headless=false
-docker compose run --rm xiaohongshu search "美食" --limit=5
+docker compose run --rm xiaohongshu search "咖啡" --limit=3
 ```
 
-Headed browser mode inside Docker needs a desktop display or a VNC setup. Use local CLI mode when you need the simplest QR login path.
+The image runs as a non-root user. The compose file mounts the host account directory and `data/` into writable locations. Local environment files, repository metadata, tests, and account state are excluded from the build context.
 
-## Skill Install
+Headed browser mode inside Docker needs a desktop display or VNC. Local CLI mode is usually simpler for QR login.
 
-Clone the repository into the Skill directory used by your agent, then restart the agent process.
+## Account profiles
 
-skills.sh:
+Use `--profile` to isolate multiple accounts:
 
 ```bash
-npx skills add DeliciousBuding/xiaohongshu-skill
+uv run python -m scripts --profile brand-a qrcode --headless=false
+uv run python -m scripts --profile brand-a check-login
+uv run python -m scripts --profile brand-a search "咖啡"
+uv run python -m scripts profiles
 ```
 
-This also creates or refreshes the public skills.sh page:
+Profile names may contain letters, numbers, dots, underscores, and dashes. Do not point two simultaneous processes at the same profile.
 
-```text
-https://www.skills.sh/deliciousbuding/xiaohongshu-skill
-```
+## Environment variables
 
-Claude Code:
-
-```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.claude/skills/xiaohongshu-skill
-```
-
-Codex:
-
-```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.codex/skills/xiaohongshu-skill
-```
-
-OpenClaw:
-
-```bash
-clawhub install xiaohongshu-skill
-```
-
-If ClawHub is unavailable, install the same folder manually:
-
-```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.openclaw/skills/xiaohongshu-skill
-```
-
-## Verify
-
-```bash
-python -m scripts check-login
-python -m scripts search "咖啡" --limit=3
-```
-
-Expected output is JSON. If login is false, run QR login again in headed mode.
-
-## Account Profiles
-
-Use `--profile` when you operate more than one account. Profile names may contain letters, numbers, dot, underscore, and dash.
-
-```bash
-python -m scripts --profile brand-a qrcode --headless=false
-python -m scripts --profile brand-a check-login
-python -m scripts --profile brand-a search "咖啡" --limit=3
-python -m scripts profiles
-```
-
-The default profile keeps the old path layout. Named profiles use isolated storage under the Xiaohongshu profile root.
-
-## Developer Checks
-
-Optional local switches live in `.env.example`. Copy it to `.env` only for your own machine, and do not commit filled values.
-
-Default checks do not touch Xiaohongshu:
-
-```bash
-python -m scripts.quality check
-python -m scripts.quality contracts
-```
-
-Windows PowerShell:
-
-```powershell
-.\make.ps1 check
-```
-
-Live browser checks are opt-in:
-
-```bash
-python -m scripts.quality live
-```
-
-PowerShell:
-
-```powershell
-.\make.ps1 live
-```
-
-## Common Problems
-
-| Problem | Fix |
+| Variable | Purpose |
 | --- | --- |
-| Browser opens but QR login does not complete | Use `--headless=false` and scan in the visible browser |
-| Search returns no structured data | Log in again and retry with a fresh browser session |
-| Captcha or verification page appears | Stop the run, wait, then continue in headed mode |
-| Docker cannot show the browser | Use local CLI for login, or configure a display for the container |
+| `XHS_PROFILE` | Default named profile |
+| `XHS_FP_SEED` | Process-local fingerprint seed override |
+| `XHS_ALLOW_NO_SANDBOX` | Explicitly disable Chromium sandbox in an isolated environment |
+| `XHS_LIVE_TEST` | Enable opt-in live tests |
+| `XHS_LIVE_KEYWORD` | Keyword for the read-only live smoke test |
+| `XHS_LIVE_HEADLESS` | Headless mode for the live smoke test |
+
+`XHS_ALLOW_NO_SANDBOX` is disabled by default and should not be set for normal desktop use.
+
+## Development setup
+
+```bash
+uv sync --frozen --group dev
+uv run python -m scripts.quality check
+```
+
+The quality command runs documentation checks, lint, unit tests, contract smoke tests, and Agent Skills validation.
+
+Targeted commands:
+
+```bash
+uv run pytest -q
+uv run ruff check scripts tests
+uv run python -m scripts.quality contracts
+uv run python -m scripts.quality skill
+```
+
+## Common problems
+
+| Problem | Action |
+| --- | --- |
+| QR login does not complete | Use `--headless=false` and finish the flow in the visible browser |
+| Search returns no structured data | Check login state, then retry with a fresh session |
+| Captcha or security verification appears | Stop automation and complete the step manually |
+| Docker cannot display the browser | Use local CLI login or configure a display server |
+| Publish returns `submitted_unconfirmed` | Review the creator page manually and do not retry automatically |

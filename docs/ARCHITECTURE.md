@@ -2,10 +2,10 @@
 
 xiaohongshu-skill ships one browser automation core through four product surfaces:
 
-1. **Agent Skill** — `SKILL.md` selects the capability and defines safety rules.
-2. **CLI** — `python -m scripts` and the installed `xiaohongshu-skill` command.
-3. **Python package** — reusable action classes and workflow helpers.
-4. **Docker image** — an isolated CLI runtime with persistent account data mounted from the host.
+1. **Agent Skill**: `SKILL.md` selects the capability and defines safety rules.
+2. **CLI**: `python -m scripts` and the installed `xiaohongshu-skill` command.
+3. **Python package**: reusable action classes and workflow helpers.
+4. **Docker image**: an isolated CLI runtime with persistent account data mounted from the host.
 
 ## Runtime boundaries
 
@@ -24,9 +24,9 @@ Xiaohongshu web interfaces
 
 Supporting layers:
 
-- **Contracts** — named browser selectors and agent-facing JSON output shapes.
-- **Workflows** — templates, strategy state, and SOP orchestration.
-- **Quality gates** — documentation checks, lint, tests, contract smoke tests, and Skill validation.
+- **Contracts**: named browser selectors and agent-facing JSON output shapes.
+- **Workflows**: templates, strategy state, and SOP orchestration.
+- **Quality gates**: documentation checks, lint, tests, contract smoke tests, and Skill validation.
 
 The CLI is an adapter, not the owner of business validation. Rules that must also apply to the Python API or SOP workflows belong in the action or domain layer.
 
@@ -35,7 +35,7 @@ The CLI is an adapter, not the owner of business validation. Rules that must als
 Each account profile has three independent state surfaces:
 
 - Playwright persistent browser data: the primary web session.
-- `cookies.json`: a backward-compatible cookie backup stored as a JSON array.
+- a backward-compatible cookie backup stored as a JSON array.
 - `session.json`: versioned metadata containing the stable fingerprint seed and save timestamp.
 
 `XHS_FP_SEED` can override the stored seed for one process. The override is not written back. Metadata and cookie backups use atomic file replacement to reduce partial-write corruption.
@@ -50,9 +50,9 @@ Not every page locator needs to be centralized. A selector becomes a named contr
 
 A publish submission distinguishes three states:
 
-- `confirmed` — a trusted success signal was observed.
-- `submitted_unconfirmed` — the publish control was activated, but success was not observed before timeout.
-- `failed` — submission was not completed or a failure signal was observed.
+- `confirmed`: a trusted success signal was observed.
+- `submitted_unconfirmed`: the publish control was activated, but success was not observed before timeout.
+- `failed`: submission was not completed or a failure signal was observed.
 
 Only `confirmed` is reported as success. This avoids treating a button click as proof that content was published.
 

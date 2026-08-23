@@ -89,8 +89,8 @@ python -m scripts publish-md --title="标题" --text="# 正文\n内容..." --wid
 # 长文
 python -m scripts publish-longform --title="标题" --content="正文..."
 
-# 定时发布（ISO8601 格式，1小时到14天之间）
-python -m scripts publish --title="标题" --content="正文" --images="img.jpg" --schedule-time="2025-03-01T12:00:00+08:00"
+# 定时发布（YYYY-MM-DD HH:MM，北京时间，1小时到14天之间）
+python -m scripts publish --title="标题" --content="正文" --images="img.jpg" --schedule-time="2025-03-01 12:00"
 ```
 
 ## 写作模板

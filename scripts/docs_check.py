@@ -21,6 +21,7 @@ DEFAULT_TARGETS = [
     "SKILL.md",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "CHANGELOG.md",
     "docs",
     "examples",
     ".github",

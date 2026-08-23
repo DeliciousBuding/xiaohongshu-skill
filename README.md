@@ -1,274 +1,169 @@
 # xiaohongshu-skill
 
-小红书 AI Agent 工具箱。搜笔记、发帖子、做互动、跑运营，一条命令全搞定。
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml)
-[![Stars](https://img.shields.io/github/stars/DeliciousBuding/xiaohongshu-skill?style=social)](https://github.com/DeliciousBuding/xiaohongshu-skill)
-[![Version](https://img.shields.io/badge/version-v1.3.0-blue)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![skills.sh](https://skills.sh/b/deliciousbuding/xiaohongshu-skill)](https://www.skills.sh/deliciousbuding/xiaohongshu-skill)
-[![ClawHub](https://img.shields.io/badge/ClawHub-download-orange)](https://clawhub.com)
+[![Release](https://img.shields.io/github/v/release/DeliciousBuding/xiaohongshu-skill)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Python + Playwright 浏览器自动化。打开页面，从 `window.__INITIAL_STATE__` 抽结构化数据，纯 JSON 输出。`SKILL.md` 遵循 [AgentSkills](https://agentskills.io) 开放规范，兼容 Claude Code / OpenClaw / Codex / Hermes Agent 等平台。
+面向 AI Agent 和命令行用户的小红书浏览器工具箱。它通过 Python Playwright 提供搜索、详情读取、推荐流、登录、发布、评论、点赞、收藏、模板、策略和 SOP 能力。
 
-## 能做什么
+- CLI 默认输出 JSON，适合 Agent 和自动化工具消费。
+- 多账号通过 profile 隔离浏览器会话和本地状态。
+- 发布结果区分已确认、已提交但未确认、失败，避免把按钮点击当成发布成功。
+- 默认测试不访问小红书；真实浏览器测试需要显式开启。
 
-**搜。** 关键词全文搜索，排序、类型、时间、范围、地点随便筛。
+> 本项目会操作真实账号。发布、评论、回复、点赞和收藏前必须获得用户明确确认。遇到验证码或安全验证时停止自动操作并切换到人工处理。
 
-**发。** 图文、视频、Markdown 转图片、长文。定时发、自动发都行。
+English documentation: [README_EN.md](README_EN.md)
 
-**互动。** 评论、回复、点赞、收藏。内置人性化延迟，防封。
+## 能力
 
-**运营。** 写作模板一键出稿，策略追踪每日配额，SOP 编排自动化。
+| 类别 | 命令 | 写入账号 |
+| --- | --- | --- |
+| 登录与账号 | `qrcode`, `check-login`, `profiles`, `logout` | `logout` 会清除本地状态 |
+| 内容发现 | `search`, `feed`, `user`, `me`, `explore` | 否 |
+| 内容发布 | `publish`, `publish-video`, `publish-md`, `publish-longform` | 是 |
+| 互动 | `comment`, `reply`, `reply-notification`, `like`, `collect`, `unlike`, `uncollect` | 是 |
+| 内容工具 | `template`, `strategy-*`, `sop` | SOP 取决于具体动作 |
+| 开发辅助 | `selectors`, `contracts` | 否 |
 
-公开展示页：[GitHub Pages](https://deliciousbuding.github.io/xiaohongshu-skill/) · [Demo 输出](https://deliciousbuding.github.io/xiaohongshu-skill/demo.html)
+完整参数见 [CLI 命令参考](docs/API.md)。
 
 ## 安装
 
-| 入口 | 适合谁 | 命令 |
-|------|--------|------|
-| skills.sh | 通用 Skill CLI 用户 | `npx skills add DeliciousBuding/xiaohongshu-skill` |
-| ClawHub | OpenClaw 用户 | `clawhub install xiaohongshu-skill` |
-| 全局 CLI | 想直接跑命令的人 | `pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git` |
-| Skill 目录 | Claude Code / Codex | `git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git <skills-dir>/xiaohongshu-skill` |
-| Docker | 想隔离运行环境的人 | `docker compose run --rm xiaohongshu qrcode --headless=false` |
+### ClawHub
 
 ```bash
-# 1. 安装
-pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
-
-# 2. 装浏览器（一次性，约 300MB）
-playwright install chromium
-# Linux/WSL: playwright install-deps chromium
-
-# 3. 扫码登录（一次性，Cookie 自动保存）
-xiaohongshu-skill qrcode --headless=false
-
-# 4. 开用
-xiaohongshu-skill search "美食"
-xiaohongshu-skill check-login
+clawhub install xiaohongshu-skill
 ```
 
-装完就能用 `xiaohongshu-skill` 命令，不需要再从源码目录运行 `python -m scripts`。
+### Agent Skills CLI
 
-Docker 会从本仓库的 `Dockerfile` 本地构建，不依赖外部镜像：
+```bash
+npx skills add DeliciousBuding/xiaohongshu-skill
+```
+
+### 本地可复现环境
 
 ```bash
 git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
 cd xiaohongshu-skill
+uv sync --frozen --no-dev
+uv run playwright install chromium
+```
+
+开发环境：
+
+```bash
+uv sync --frozen --group dev
+uv run python -m scripts.quality check
+```
+
+### 全局 CLI
+
+```bash
+pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
+playwright install chromium
+xiaohongshu-skill --help
+```
+
+### Docker
+
+```bash
+docker compose build
 docker compose run --rm xiaohongshu qrcode --headless=false
 ```
 
-## 功能详解
+更完整的系统和平台说明见 [安装指南](docs/INSTALL.md)。
 
-### 搜索笔记
+## 快速开始
 
-```bash
-xiaohongshu-skill search "旅行攻略" --sort-by=最新 --note-type=图文 --limit=10
-```
-
-| 参数 | 可选值 |
-|------|--------|
-| `--sort-by` | 综合 / 最新 / 最多点赞 / 最多评论 / 最多收藏 |
-| `--note-type` | 不限 / 视频 / 图文 |
-| `--publish-time` | 不限 / 一天内 / 一周内 / 半年内 |
-| `--search-scope` | 不限 / 已看过 / 未看过 / 已关注 |
-| `--location` | 不限 / 同城 / 附近 |
-
-### 帖子详情 & 用户主页
+### 1. 登录
 
 ```bash
-# id 和 xsec_token 从搜索结果拿
-xiaohongshu-skill feed <id> <xsec_token>
-xiaohongshu-skill feed <id> <xsec_token> --load-comments --max-comments=20
-# 用户主页
-xiaohongshu-skill user <user_id> [xsec_token]
-xiaohongshu-skill me
+uv run python -m scripts qrcode --headless=false
+uv run python -m scripts check-login
 ```
 
-### 评论 & 回复
+### 2. 搜索和读取
 
 ```bash
-xiaohongshu-skill comment <id> <token> --content="写得真好"
-xiaohongshu-skill reply <id> <token> --comment-id=<cid> --reply-user-id=<uid> --content="感谢"
-xiaohongshu-skill reply-notification --content="谢谢" --index=0  # 从通知页回，更安全
+uv run python -m scripts search "咖啡" --limit=5
+uv run python -m scripts feed <feed_id> <xsec_token>
+uv run python -m scripts user <user_id> <xsec_token>
+uv run python -m scripts explore --limit=10
 ```
 
-### 点赞 & 收藏
+`feed_id`、`user_id` 和 `xsec_token` 应来自当前会话的搜索或详情结果，不要长期缓存安全参数。
+
+### 3. 准备发布
+
+默认发布命令只填写内容并停在发布页：
 
 ```bash
-xiaohongshu-skill like <id> <token>
-xiaohongshu-skill unlike <id> <token>
-xiaohongshu-skill collect <id> <token>
-xiaohongshu-skill uncollect <id> <token>
+uv run python -m scripts publish \
+  --title="周末咖啡记录" \
+  --content="正文内容" \
+  --images="/path/to/1.jpg,/path/to/2.jpg"
 ```
 
-### 推荐流 & 发布笔记
+确认标题、正文、媒体、账号和可见范围后，才使用：
 
 ```bash
-xiaohongshu-skill explore --limit=20
-
-# 图文发布（默认停在发布按钮，加 --auto-publish 自动发）
-xiaohongshu-skill publish --title="标题" --content="正文" \
-  --images="a.jpg,b.jpg" --tags="旅行,美食"
-
-# 视频 / Markdown 渲染发图 / 长文 / 定时发布
-xiaohongshu-skill publish-video --title="t" --content="c" --video="v.mp4" --tags="vlog"
-xiaohongshu-skill publish-md --title="技术文" --file=article.md --width=1080
-xiaohongshu-skill publish-longform --title="标题" --content="正文..."
-xiaohongshu-skill publish --title="预告" --content="..." --images="img.jpg" --schedule-time="2025-03-01 12:00"
+uv run python -m scripts publish ... --auto-publish
 ```
 
-### 写作模板 & 运营策略
+自动提交结果状态：
+
+| 状态 | 含义 | 建议动作 |
+| --- | --- | --- |
+| `confirmed` | 观察到可信成功信号 | 可以记录为成功 |
+| `submitted_unconfirmed` | 已点击提交，但没有观察到成功信号 | 人工复核，禁止自动重试 |
+| `failed` | 未提交或观察到失败信号 | 检查错误后再决定 |
+| `ready` | 内容已填写，尚未点击发布 | 人工检查后决定是否提交 |
+
+### 4. 多账号
 
 ```bash
-xiaohongshu-skill template --topic="美食探店"
-xiaohongshu-skill template --topic="学习方法" --type=长文
-# 输出：标题建议 + 内容框架 + 标签推荐
-
-xiaohongshu-skill strategy-init --persona="旅行博主" \
-  --audience="18-35岁" --direction="旅行攻略,小众目的地"
-xiaohongshu-skill strategy-show
-xiaohongshu-skill strategy-check-limit --limit-type=likes
-xiaohongshu-skill strategy-add-post --date="2025-03-01" --topic="春日出行" --type=图文
+uv run python -m scripts --profile brand-a qrcode --headless=false
+uv run python -m scripts --profile brand-a search "咖啡"
+uv run python -m scripts profiles
 ```
 
-### 多账号 profile
+不同 profile 使用独立的浏览器数据、Cookie 备份和会话元数据。`XHS_FP_SEED` 可临时覆盖当前进程的稳定指纹 seed。
 
-默认 profile 沿用旧的 `~/.xiaohongshu/` 会话。多账号使用时加 `--profile`，每个 profile 会隔离 Cookie 和浏览器数据：
+## 安全和限制
+
+- 不要关闭内置导航间隔和互动冷却。
+- 不要运行高频批量抓取或批量互动。
+- 遇到验证码、登录页或安全验证页时停止。
+- 不要在 issue、日志或截图中提交账号信息、Cookie、完整安全参数或二维码。
+- Docker 镜像以非 root 用户运行，本地敏感状态不会进入构建上下文。
+- `XHS_ALLOW_NO_SANDBOX=true` 只适用于明确需要关闭 Chromium sandbox 的隔离环境。
+
+详见 [安全说明](docs/SECURITY.md)。
+
+## 工程设计
+
+- [架构](docs/ARCHITECTURE.md)
+- [安装](docs/INSTALL.md)
+- [CLI API](docs/API.md)
+- [平台集成](docs/INTEGRATIONS.md)
+- [安全](docs/SECURITY.md)
+- [参考实现与来源](docs/REFERENCE.md)
+- [发布流程](docs/RELEASING.md)
+- [路线图](docs/ROADMAP.md)
+
+默认质量门：
 
 ```bash
-xiaohongshu-skill --profile brand-a qrcode --headless=false
-xiaohongshu-skill --profile brand-a search "咖啡" --limit=5
-xiaohongshu-skill profiles
-xiaohongshu-skill --profile brand-a logout
+uv run python -m scripts.quality check
 ```
 
-### 维护辅助
+CI 还会测试 Python 3.10、3.11、3.12，构建 wheel 和源码包，并验证 Docker 镜像。
 
-```bash
-xiaohongshu-skill selectors
-xiaohongshu-skill selectors --owner=publish
-xiaohongshu-skill contracts
-xiaohongshu-skill contracts --command=search
-```
+## 来源与许可证
 
-`selectors` 输出当前浏览器自动化选择器契约，方便排查页面结构变化。它是只读命令，不会打开浏览器。
+仓库原创代码按 [MIT License](LICENSE) 发布。部分浏览器行为参考或改写自 Apache-2.0 项目 `xpzouying/xiaohongshu-mcp`，详情见 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
-`contracts` 输出 CLI JSON 字段契约，方便 Agent 集成时做稳定解析。
-
-### SOP 编排
-
-```bash
-# 发布全流程：选题分析 → 内容校验 → 模板生成 → 发布准备
-xiaohongshu-skill sop --type=publish --topic="旅行攻略" --note-type=图文
-
-# 推荐流交互：模拟真实浏览，按概率点赞/收藏/评论
-xiaohongshu-skill sop --type=explore --feed-count=10 --like-prob=0.3 --collect-prob=0.1
-
-# 评论回复：逐条处理，配额控制
-xiaohongshu-skill sop --type=comment \
-  --replies='[{"feed_id":"abc","xsec_token":"xyz","content":"好棒"}]'
-```
-
-## 输出格式
-
-所有命令输出 JSON。搜索结果长这样：
-
-```json
-{
-  "id": "abc123",
-  "xsec_token": "ABxyz...",
-  "title": "帖子标题",
-  "type": "normal",
-  "user": "用户名",
-  "user_id": "user123",
-  "liked_count": "1234",
-  "collected_count": "567",
-  "comment_count": "89"
-}
-```
-
-公开示例见 [examples/demo](examples/demo) 和 Pages demo 页面。示例是合成数据，不含真实账号、Cookie、二维码或本机路径。
-
-## 反爬保护
-
-小红书反爬严，下面这套别关：
-
-- 两次导航间随机等 **3-6 秒**；每 5 次额外冷却 **10 秒**
-- 点按钮前随机 **1-2.5s**，点完冷却 **5-12s**；每 3 次互动批次冷却 **15-30s**
-- 发布时标题输入间隔 **0.5-1.5s**，正文逐字 **20-60ms**
-- 自动检测 toast（"操作太快"、"稍后再试"）；评论失败自动重试一次
-- 触发安全验证页时抛 `CaptchaError`
-
-触发验证码了？等几分钟，`xiaohongshu-skill qrcode --headless=false` 手动过，Cookie 失效就重登。
-
-## 平台兼容性
-
-| 平台 | 状态 |
-|------|------|
-| Windows 11 | 主力环境，全功能 |
-| WSL2 (Ubuntu) | 无头直接跑，有头需 WSLg |
-| Linux 服务器 | 仅无头，二维码存图片 |
-| macOS | 未测试，应该可用 |
-
-Python 3.10+，Playwright >= 1.40.0。
-
-## 作为 AI Skill 挂载
-
-`SKILL.md` 遵循 [AgentSkills](https://agentskills.io) 开放规范，兼容所有支持该标准的 AI Agent 平台。`{baseDir}` 模板变量会被自动替换为实际路径。
-
-**支持平台：**
-- **skills.sh**：`npx skills add DeliciousBuding/xiaohongshu-skill`
-- **Claude Code**：目录加到 Skill 配置，自动识别加载
-- **OpenClaw**：`clawhub install xiaohongshu-skill` 一键安装
-- **Codex**：放入 Skills 目录即可，跟 OpenClaw 同体系
-- **Hermes Agent**：导入 `SKILL.md`，Agent 自动理解所有命令
-
-通用方式：把仓库克隆到平台的 Skills 目录下，AI Agent 会在下个会话自动加载。
-
-## 更多文档
-
-- 安装：[docs/INSTALL.md](docs/INSTALL.md)
-- 平台集成：[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)
-- 安全和公开 issue 规则：[docs/SECURITY.md](docs/SECURITY.md)
-- 参考项目映射：[docs/REFERENCE.md](docs/REFERENCE.md)
-- GitHub Pages 和 SEO/GEO：[docs/PAGES.md](docs/PAGES.md)
-- 路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
-- 公开 demo：[examples/demo](examples/demo)
-
-## FAQ
-
-**Cookie 多久过期？** 几天到一周。`check-login` 返回 false 就重登。
-
-**xsec_token 必须每次传吗？** 对，小红书的安全参数跟会话绑定。从搜索或用户结果里拿最新的。
-
-**能批量抓取吗？** 量大了必出验证码。内置频率控制别关。
-
-**无头模式怎么扫码？** 二维码存 `data/qrcode.png`，发手机扫。第一次建议 `--headless=false`。
-
-**会封号吗？** 有反爬保护但违反正规 ToS。建议小号，风险自负。
-
-**跟 xiaohongshu-mcp 什么关系？** 灵感来自 Go 版 [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp)。本项目是 Python 重写，功能更多（发布、策略、SOP）。
-
-[![Star History Chart](https://api.star-history.com/svg?repos=DeliciousBuding/xiaohongshu-skill&type=Timeline)](https://www.star-history.com/#DeliciousBuding/xiaohongshu-skill&Timeline)
-
-## 社区
-
-觉得有用点个 Star。遇到问题开 Issue（带日志和复现步骤），想改代码直接提 PR。任何贡献都欢迎。
-
-## 注意事项
-
-- Cookie 定期过期，`check-login` 返回 false 需重登
-- 别关内置频率控制，关了秒出验证码
-- xsec_token 跟会话绑定，始终用最新值
-- 学习研究用途，遵守小红书使用条款
-
-## 致谢
-
-灵感来自 [xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp)（Go 版本）。
-
-## 许可证
-
-[MIT](LICENSE)
+本项目与小红书官方无隶属或授权关系。使用者应自行遵守适用的平台规则、法律法规和账号安全要求。

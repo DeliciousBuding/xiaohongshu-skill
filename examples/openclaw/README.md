@@ -11,7 +11,8 @@ Manual install:
 ```bash
 git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.openclaw/skills/xiaohongshu-skill
 cd ~/.openclaw/skills/xiaohongshu-skill
-pip install -r requirements.txt
+uv sync --frozen --no-dev
+uv run playwright install chromium
 playwright install chromium
 python -m scripts qrcode --headless=false
 ```
