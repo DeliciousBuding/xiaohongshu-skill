@@ -2,7 +2,7 @@
 小红书发布模块（图文 + 视频）
 
 基于 xiaohongshu-mcp/publish.go + publish_video.go 翻译
-整合 xiaohongshu-ops 的安全发布理念（人工确认 checkpoint）
+安全发布校验（人工确认 checkpoint）
 """
 
 import os
