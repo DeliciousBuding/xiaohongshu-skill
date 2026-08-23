@@ -1,7 +1,7 @@
 """
 小红书浏览器客户端封装
 
-基于 xiaohongshu-mcp Go 源码翻译为 Python Playwright
+Reference: xiaohongshu-mcp (Apache-2.0), reimplemented with Python Playwright. See THIRD_PARTY_NOTICES.md.
 """
 
 import hashlib

@@ -1,7 +1,7 @@
 """
 小红书互动模块（点赞 / 取消点赞 / 收藏 / 取消收藏）
 
-基于 xiaohongshu-mcp/like_favorite.go 翻译
+Reference: xiaohongshu-mcp/like_favorite.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 安全互动校验：人性化延迟、频率检测、批次冷却
 """
 

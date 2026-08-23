@@ -1,7 +1,7 @@
 """
 小红书评论模块
 
-基于 xiaohongshu-mcp/comment_feed.go 翻译
+Reference: xiaohongshu-mcp/comment_feed.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 评论安全校验：长度校验、人性化延迟、频率检测
 """
 

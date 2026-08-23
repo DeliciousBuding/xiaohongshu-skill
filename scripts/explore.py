@@ -1,7 +1,7 @@
 """
 小红书首页推荐流模块
 
-基于 xiaohongshu-mcp/feeds.go 翻译
+Reference: xiaohongshu-mcp/feeds.go (Apache-2.0). See THIRD_PARTY_NOTICES.md.
 """
 
 import json
