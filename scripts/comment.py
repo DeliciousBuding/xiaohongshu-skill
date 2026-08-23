@@ -2,7 +2,7 @@
 小红书评论模块
 
 基于 xiaohongshu-mcp/comment_feed.go 翻译
-整合 xiaohongshu-ops 的安全评论理念（长度校验、人性化延迟、频率检测）
+评论安全校验：长度校验、人性化延迟、频率检测
 """
 
 import random
@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 from ._utils import make_feed_url
 from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
-# 评论安全常量（来自 xiaohongshu-ops）
+# 评论安全常量
 MAX_COMMENT_LENGTH = 280
 TYPING_DELAY_MIN = 30   # 每字符输入延迟下限（ms）
 TYPING_DELAY_MAX = 80   # 每字符输入延迟上限（ms）
@@ -44,7 +44,7 @@ class CommentAction:
     @staticmethod
     def validate_comment(content: str) -> Optional[str]:
         """
-        评论内容校验（来自 ops 安全理念）
+        评论内容校验
 
         Returns:
             None 表示校验通过，否则返回错误原因
@@ -57,7 +57,7 @@ class CommentAction:
 
     def _check_rate_limit(self) -> bool:
         """
-        检测是否触发了评论频率限制（来自 ops 安全理念）
+        检测是否触发了评论频率限制
 
         Returns:
             True 表示被限流
@@ -83,7 +83,7 @@ class CommentAction:
 
     def _verify_input_placeholder(self, expected_hint: Optional[str] = None) -> bool:
         """
-        验证输入框 placeholder 是否正确（来自 ops 安全理念）
+        验证输入框 placeholder 是否正确
         确保输入框已正确激活，防止误输入
 
         Args:
@@ -188,7 +188,7 @@ class CommentAction:
         return None
 
     def _type_and_submit(self, content: str, max_retries: int = 1) -> bool:
-        """在评论输入框中输入文字并提交（整合 ops 人性化延迟 + 失败重试）"""
+        """在评论输入框中输入文字并提交（人性化延迟 + 失败重试）"""
         for attempt in range(max_retries + 1):
             if attempt > 0:
                 print(f"重试 _type_and_submit（第 {attempt + 1}/{max_retries + 1} 次）...", file=sys.stderr)
@@ -355,7 +355,7 @@ class CommentAction:
                 if reply_btn.count() > 0:
                     reply_btn.first.click()
                     time.sleep(0.5)
-                    # 验证输入框 placeholder（ops 技巧）
+                    # 验证输入框 placeholder
                     self._verify_input_placeholder("回复")
                 else:
                     print("未找到回复按钮，尝试直接在评论框回复", file=sys.stderr)
@@ -396,7 +396,7 @@ class CommentAction:
         notification_index: int = 0,
     ) -> Dict[str, Any]:
         """
-        通过通知页回复评论（ops 推荐路径，比直跳详情页更安全）
+        通过通知页回复评论（比直跳详情页更安全）
 
         Flow:
         1. 导航到 /notification 通知页
@@ -550,7 +550,7 @@ def reply_via_notification(
     cookie_path: str = DEFAULT_COOKIE_PATH,
 ) -> Dict[str, Any]:
     """
-    通过通知页回复评论（ops 推荐的安全路径）
+    通过通知页回复评论（安全路径）
 
     Args:
         content: 回复内容

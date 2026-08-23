@@ -2,7 +2,7 @@
 小红书互动模块（点赞 / 取消点赞 / 收藏 / 取消收藏）
 
 基于 xiaohongshu-mcp/like_favorite.go 翻译
-整合 xiaohongshu-ops 的安全互动理念（人性化延迟、频率检测、批次冷却）
+安全互动校验：人性化延迟、频率检测、批次冷却
 """
 
 import json
@@ -21,7 +21,7 @@ from .selectors import (
     INTERACT_RATE_LIMIT_TOAST_CONTRACT,
 )
 
-# 互动安全常量（来自 xiaohongshu-ops）
+# 互动安全常量
 PRE_CLICK_DELAY_MIN = 1.0     # 点击前延迟下限（秒）
 PRE_CLICK_DELAY_MAX = 2.5     # 点击前延迟上限（秒）
 POST_CLICK_COOLDOWN_MIN = 5   # 点击后冷却下限（秒）
@@ -110,7 +110,7 @@ class InteractAction:
 
     def _check_rate_limit(self) -> bool:
         """
-        检测是否触发了互动频率限制（来自 ops 安全理念）
+        检测是否触发了互动频率限制
 
         Returns:
             True 表示被限流
