@@ -1,7 +1,5 @@
 # GitHub Pages
 
-Last updated: 2026-07-07
-
 The Pages site should be a product page for users who do not read GitHub READMEs first.
 
 ## Page Goals
