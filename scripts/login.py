@@ -5,13 +5,13 @@
 支持生成微信登录二维码，保存供主模型发送
 """
 
-import sys
-import time
 import base64
 import os
-from typing import Optional, Tuple, Dict, Any
+import sys
+import time
+from typing import Any, Dict, Optional, Tuple
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 from .profiles import env_profile, profile_paths
 
 
@@ -21,6 +21,8 @@ QRCODE_DIR = os.path.join(SKILL_DIR, "data")
 QRCODE_PATH = os.path.join(QRCODE_DIR, "qrcode.png")
 CREATOR_PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
 CREATOR_READY_SELECTOR = 'div.upload-content, div.creator-tab, input[type="file"]'
+MAIN_PROFILE_SELECTOR = 'a.link-wrapper[href^="/user/profile/"]:has(span.channel)'
+QRCODE_SELECTOR = 'img.qrcode-img[src^="data:image"]'
 
 
 class LoginAction:
@@ -46,34 +48,14 @@ class LoginAction:
             self.client.navigate("https://www.xiaohongshu.com/explore")
             time.sleep(3)
 
-        # ---- 方式 1：检查 cookie 里是否包含 web_session ----
-        # 登录弹窗可能在已登录页面上残留，不能优先于有效会话判断。
-        try:
-            cookies = self.client.context.cookies()
-            has_session = any(c['name'] == 'web_session' for c in cookies)
-            if has_session:
-                username = self._try_get_username()
-                return True, username or "已登录用户"
-        except Exception:
-            pass
+        # Cookie 可能过期但仍留在本地，以页面的实际认证状态为准。
+        qr = page.locator(QRCODE_SELECTOR)
+        if qr.count() > 0 and qr.first.is_visible():
+            return False, None
 
-        # ---- 方式 2：检测页面上是否弹出了登录弹窗 ----
-        try:
-            qr = page.locator('img.qrcode-img[src^="data:image"]')
-            if qr.count() > 0 and qr.first.is_visible():
-                return False, None
-        except Exception:
-            pass
-
-        # ---- 方式 3：检查 HTML 里有没有用户头像链接（登录后才有） ----
-        try:
-            # 侧边栏会有 /user/profile/xxx 的链接
-            profile_link = page.locator('a[href*="/user/profile/"]')
-            if profile_link.count() > 0:
-                username = self._try_get_username()
-                return True, username or "已登录用户"
-        except Exception:
-            pass
+        profile_link = page.locator(MAIN_PROFILE_SELECTOR)
+        if profile_link.count() > 0 and profile_link.first.is_visible():
+            return True, "已登录用户"
 
         return False, None
 
@@ -97,17 +79,6 @@ class LoginAction:
                 return True
             time.sleep(2)
         return False
-
-    def _try_get_username(self) -> Optional[str]:
-        """尝试从页面提取用户昵称"""
-        try:
-            name = self.client.page.evaluate("""() => {
-                const el = document.querySelector('.user .name, .sidebar .user-name, [class*="nickname"]');
-                return el ? el.textContent.trim() : '';
-            }""")
-            return name if name else None
-        except Exception:
-            return None
 
     def get_wechat_qrcode(self) -> Tuple[Optional[str], bool]:
         """
@@ -137,9 +108,9 @@ class LoginAction:
         qrcode_src = None
         for attempt in range(5):
             try:
-                qr = page.locator('img.qrcode-img[src^="data:image"]')
+                qr = page.locator(QRCODE_SELECTOR)
                 if qr.count() > 0:
-                    src = qr.first.get_attribute('src')
+                    src = qr.first.get_attribute("src")
                     if src and len(src) > 200:  # 有效 base64 至少上百字符
                         qrcode_src = src
                         break
@@ -149,13 +120,13 @@ class LoginAction:
 
         if qrcode_src:
             # 去掉 data:image/png;base64, 前缀
-            if ',' in qrcode_src:
-                qrcode_src = qrcode_src.split(',', 1)[1]
+            if "," in qrcode_src:
+                qrcode_src = qrcode_src.split(",", 1)[1]
 
             # 保存二维码图片
             img_data = base64.b64decode(qrcode_src)
             os.makedirs(QRCODE_DIR, exist_ok=True)
-            with open(QRCODE_PATH, 'wb') as f:
+            with open(QRCODE_PATH, "wb") as f:
                 f.write(img_data)
 
             print(f"二维码已保存到: {QRCODE_PATH}", file=sys.stderr)
@@ -193,28 +164,15 @@ class LoginAction:
                 print(f"  等待中... 还剩 {remaining} 秒", file=sys.stderr)
             time.sleep(2)
 
-        # ---- 阶段 2: 开始轮询检测 web_session cookie ----
+        # ---- 阶段 2: 开始轮询页面认证状态 ----
         print("开始检测登录状态...", file=sys.stderr)
         while time.time() - start < timeout:
-            try:
-                cookies = self.client.context.cookies()
-                has_session = any(c['name'] == 'web_session' for c in cookies)
-                if has_session:
-                    print("检测到 web_session cookie，登录成功！", file=sys.stderr)
-                    # 等待页面完成登录流程（写入 localStorage/sessionStorage）
-                    # 持久化上下文需要这些状态才能在下次启动时保持登录
-                    print("等待页面完成登录初始化...", file=sys.stderr)
-                    time.sleep(5)
-                    # 导航到首页确保登录状态完全生效
-                    try:
-                        self.client.page.goto("https://www.xiaohongshu.com/explore", wait_until="networkidle", timeout=15000)
-                        time.sleep(3)
-                    except Exception:
-                        time.sleep(3)
-                    self.client._save_cookies()
-                    return True
-            except Exception:
-                pass
+            is_logged_in, _ = self.check_login_status(navigate=False)
+            if is_logged_in:
+                print("检测到主站已登录！", file=sys.stderr)
+                time.sleep(5)
+                self.client._save_cookies()
+                return True
 
             elapsed = int(time.time() - start)
             remaining = timeout - elapsed
@@ -227,6 +185,7 @@ class LoginAction:
 
 
 # ====== 顶层便捷函数 ======
+
 
 def check_login(
     cookie_path: str = DEFAULT_COOKIE_PATH,
@@ -342,6 +301,7 @@ def login(
 def logout(cookie_path=None, user_data_dir=None):
     """删除浏览器持久化数据和 Cookie 文件，重置登录状态"""
     import shutil
+
     # 1. 删除持久化浏览器数据目录
     paths = profile_paths(env_profile())
     data_dir = user_data_dir or str(paths.user_data_dir)
@@ -352,7 +312,9 @@ def logout(cookie_path=None, user_data_dir=None):
     if os.path.exists(path):
         os.remove(path)
     # 3. 删除策略文件
-    strategy_file = os.path.join(os.path.expanduser("~"), ".xiaohongshu", "strategy.json")
+    strategy_file = os.path.join(
+        os.path.expanduser("~"), ".xiaohongshu", "strategy.json"
+    )
     if os.path.exists(strategy_file):
         os.remove(strategy_file)
     return {"status": "ok", "message": "登录状态已清除"}
