@@ -2,11 +2,13 @@
 XiaohongshuClient 单元测试
 """
 
+import json
 import time
 from unittest.mock import MagicMock
+
 import pytest
 
-from scripts.client import XiaohongshuClient, CaptchaError
+from scripts.client import CaptchaError, XiaohongshuClient
 
 
 class TestInstanceStateIsolation:
@@ -205,11 +207,13 @@ class TestBrowserAutomationContract:
         fake_sync = MagicMock()
         fake_sync.start.return_value = fake_playwright
         monkeypatch.setattr("scripts.client.sync_playwright", lambda: fake_sync)
+        monkeypatch.delenv("XHS_ALLOW_NO_SANDBOX", raising=False)
 
         client = XiaohongshuClient(
             cookie_path=str(tmp_path / "cookies.json"),
             user_data_dir=str(tmp_path / "browser-data"),
         )
+        client.STEALTH_JS_PATH = str(tmp_path / "stealth.js")
 
         client.start()
 
@@ -217,6 +221,7 @@ class TestBrowserAutomationContract:
         assert call_args.kwargs["user_data_dir"] == str(tmp_path / "browser-data")
         assert "--enable-automation" in call_args.kwargs["ignore_default_args"]
         assert "--disable-blink-features=AutomationControlled" in call_args.kwargs["args"]
+        assert "--no-sandbox" not in call_args.kwargs["args"]
         assert call_args.kwargs["locale"] == "zh-CN"
         assert call_args.kwargs["timezone_id"] == "Asia/Shanghai"
         fake_context.add_init_script.assert_called_once()
@@ -233,7 +238,55 @@ class TestBrowserAutomationContract:
         assert "navigator, 'languages'" in stealth_js
         assert "WebGLRenderingContext.prototype.getParameter" in stealth_js
         assert "HTMLCanvasElement.prototype.toDataURL" in stealth_js
+        assert "Math.random" not in stealth_js
+        assert "__XHS_FINGERPRINT_SEED__" in stealth_js
         assert "Error.prototype, 'stack'" in stealth_js
+
+    def test_same_seed_builds_stable_script_and_seed_is_not_embedded(self, tmp_path):
+        """同一 seed 的注入脚本稳定，不把原始 seed 放进脚本。"""
+        client = XiaohongshuClient(
+            cookie_path=str(tmp_path / "cookies.json"),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+        client.STEALTH_JS_PATH = str(tmp_path / "stealth.js")
+
+        first = client._load_stealth_js("private-profile-seed")
+        second = client._load_stealth_js("private-profile-seed")
+        other = client._load_stealth_js("another-profile-seed")
+
+        assert first == second
+        assert first != other
+        assert "private-profile-seed" not in first
+        assert "__XHS_FINGERPRINT_SEED__" not in first
+        assert "__xhsCanvasNoise" in first
+
+    def test_no_sandbox_requires_explicit_environment_switch(
+        self, monkeypatch, tmp_path
+    ):
+        """Only an explicit environment switch may disable Chromium sandboxing."""
+        fake_page = MagicMock()
+        fake_context = MagicMock()
+        fake_context.cookies.return_value = []
+        fake_context.pages = []
+        fake_context.new_page.return_value = fake_page
+
+        fake_playwright = MagicMock()
+        fake_playwright.chromium.launch_persistent_context.return_value = fake_context
+
+        fake_sync = MagicMock()
+        fake_sync.start.return_value = fake_playwright
+        monkeypatch.setattr("scripts.client.sync_playwright", lambda: fake_sync)
+        monkeypatch.setenv("XHS_ALLOW_NO_SANDBOX", "true")
+
+        client = XiaohongshuClient(
+            cookie_path=str(tmp_path / "cookies.json"),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+        client.STEALTH_JS_PATH = str(tmp_path / "stealth.js")
+        client.start()
+
+        call_args = fake_playwright.chromium.launch_persistent_context.call_args
+        assert "--no-sandbox" in call_args.kwargs["args"]
 
 
 class TestCaptchaError:
@@ -249,3 +302,57 @@ class TestCaptchaError:
         """默认消息应包含 URL"""
         err = CaptchaError(url="https://example.com/captcha")
         assert "https://example.com/captcha" in str(err)
+
+
+class TestCookieBackup:
+    """Cookie backup compatibility and redaction tests."""
+
+    def test_legacy_cookie_list_is_loaded_without_logging_values(self, tmp_path, caplog):
+        caplog.set_level("INFO")
+        cookie_path = tmp_path / "cookies.json"
+        secret_value = "sensitive-cookie-value"
+        cookies = [{"name": "web_session", "value": secret_value, "domain": ".example"}]
+        cookie_path.write_text(json.dumps(cookies), encoding="utf-8")
+        client = XiaohongshuClient(
+            cookie_path=str(cookie_path),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+        client.context = MagicMock()
+
+        client._load_cookies()
+
+        client.context.add_cookies.assert_called_once_with(cookies)
+        assert secret_value not in caplog.text
+
+    def test_non_list_cookie_backup_is_ignored(self, tmp_path, caplog):
+        cookie_path = tmp_path / "cookies.json"
+        cookie_path.write_text('{"cookies": []}', encoding="utf-8")
+        client = XiaohongshuClient(
+            cookie_path=str(cookie_path),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+        client.context = MagicMock()
+
+        client._load_cookies()
+
+        client.context.add_cookies.assert_not_called()
+        assert "continuing with browser profile" in caplog.text
+
+    def test_cookie_backup_remains_a_json_array(self, tmp_path, caplog):
+        caplog.set_level("INFO")
+        cookie_path = tmp_path / "cookies.json"
+        secret_value = "sensitive-cookie-value"
+        cookies = [{"name": "web_session", "value": secret_value}]
+        client = XiaohongshuClient(
+            cookie_path=str(cookie_path),
+            user_data_dir=str(tmp_path / "browser-data"),
+        )
+        client.context = MagicMock()
+        client.context.cookies.return_value = cookies
+
+        client._save_cookies()
+
+        assert json.loads(cookie_path.read_text(encoding="utf-8")) == cookies
+        assert isinstance(json.loads(cookie_path.read_text(encoding="utf-8")), list)
+        assert secret_value not in caplog.text
+        assert list(tmp_path.glob(".cookies.json.*.tmp")) == []

@@ -12,6 +12,7 @@ def test_default_profile_keeps_legacy_paths(tmp_path):
 
     assert paths.cookie_path == tmp_path / "cookies.json"
     assert paths.user_data_dir == tmp_path / "browser-data"
+    assert paths.session_path == tmp_path / "session.json"
 
 
 def test_named_profile_uses_isolated_paths(tmp_path):
@@ -19,6 +20,7 @@ def test_named_profile_uses_isolated_paths(tmp_path):
 
     assert paths.cookie_path == tmp_path / "profiles" / "brand-a" / "cookies.json"
     assert paths.user_data_dir == tmp_path / "profiles" / "brand-a" / "browser-data"
+    assert paths.session_path == tmp_path / "profiles" / "brand-a" / "session.json"
 
 
 def test_profile_name_rejects_path_segments(tmp_path):
@@ -62,5 +64,23 @@ def test_list_profiles_includes_named_profiles(tmp_path):
             "user_data_dir": str(profile_dir / "browser-data"),
             "cookie_exists": False,
             "user_data_dir_exists": True,
+        }
+    ]
+
+
+def test_list_profiles_includes_session_metadata_only_profile(tmp_path):
+    profile_dir = tmp_path / "profiles" / "brand-a"
+    profile_dir.mkdir(parents=True)
+    (profile_dir / "session.json").write_text("{}", encoding="utf-8")
+
+    profiles = list_profiles(root=tmp_path)
+
+    assert profiles == [
+        {
+            "name": "brand-a",
+            "cookie_path": str(profile_dir / "cookies.json"),
+            "user_data_dir": str(profile_dir / "browser-data"),
+            "cookie_exists": False,
+            "user_data_dir_exists": False,
         }
     ]
