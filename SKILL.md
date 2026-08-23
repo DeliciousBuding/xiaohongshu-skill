@@ -49,9 +49,16 @@ python -m scripts qrcode --headless=false
 
 # 检查登录还在不在
 python -m scripts check-login
+
+# 发布前检查创作者中心的独立登录状态
+python -m scripts check-creator-login
+
+# 如未登录，在可见浏览器中完成短信验证
+python -m scripts creator-login --headless=false
 ```
 
 无头环境里二维码存到 `{baseDir}/data/qrcode.png`。传给别人扫也行。
+主站与创作者中心可能要求分别登录：搜索、详情和互动使用主站会话，发布使用创作者中心会话。
 
 ### 2. 搜索
 
@@ -140,6 +147,7 @@ python -m scripts explore --limit=20
 ### 8. 发布笔记
 
 **先确认再发。** 跑之前用 `AskUserQuestion` 把标题、正文、图片亮出来让用户确认。
+发布前先运行 `python -m scripts check-creator-login`；如返回 `false`，运行 `python -m scripts creator-login --headless=false`。
 
 ```bash
 cd {baseDir}

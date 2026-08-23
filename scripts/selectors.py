@@ -35,6 +35,12 @@ SELECTOR_CONTRACTS: tuple[SelectorContract, ...] = (
         selectors=('a[href*="/user/profile/"]',),
     ),
     SelectorContract(
+        name="login.creator_ready",
+        owner="login",
+        purpose="Detect an authenticated Creator Center publish page",
+        selectors=("div.upload-content", "div.creator-tab", 'input[type="file"]'),
+    ),
+    SelectorContract(
         name="search.filter_button",
         owner="search",
         purpose="Open the search filter panel",

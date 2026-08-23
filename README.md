@@ -45,9 +45,13 @@ playwright install chromium
 # 3. 扫码登录（一次性，Cookie 自动保存）
 xiaohongshu-skill qrcode --headless=false
 
-# 4. 开用
+# 4. 如需发布，登录创作者中心（可能要求短信验证）
+xiaohongshu-skill creator-login --headless=false
+
+# 5. 开用
 xiaohongshu-skill search "美食"
 xiaohongshu-skill check-login
+xiaohongshu-skill check-creator-login
 ```
 
 装完就能用 `xiaohongshu-skill` 命令，不需要再从源码目录运行 `python -m scripts`。
@@ -108,6 +112,10 @@ xiaohongshu-skill uncollect <id> <token>
 
 ```bash
 xiaohongshu-skill explore --limit=20
+
+# 主站与创作者中心可能需要分别登录
+xiaohongshu-skill check-creator-login
+xiaohongshu-skill creator-login --headless=false
 
 # 图文发布（默认停在发布按钮，加 --auto-publish 自动发）
 xiaohongshu-skill publish --title="标题" --content="正文" \

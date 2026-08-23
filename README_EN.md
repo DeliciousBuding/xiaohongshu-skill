@@ -45,9 +45,13 @@ playwright install chromium
 # 3. QR login (one-time, cookies saved automatically)
 xiaohongshu-skill qrcode --headless=false
 
-# 4. Go
+# 4. Before publishing, sign in to Creator Center (phone verification may be required)
+xiaohongshu-skill creator-login --headless=false
+
+# 5. Go
 xiaohongshu-skill search "hotpot"
 xiaohongshu-skill check-login
+xiaohongshu-skill check-creator-login
 ```
 
 After install, the `xiaohongshu-skill` command is available globally.
@@ -110,6 +114,10 @@ xiaohongshu-skill uncollect <id> <token>
 
 ```bash
 xiaohongshu-skill explore --limit=20
+
+# The main site and Creator Center may require separate sessions
+xiaohongshu-skill check-creator-login
+xiaohongshu-skill creator-login --headless=false
 
 # Image-text post (stops at publish button by default; add --auto-publish to go live)
 xiaohongshu-skill publish --title="标题" --content="正文" \

@@ -7,6 +7,8 @@
 ```bash
 python -m scripts qrcode --headless=false   # 扫码登录
 python -m scripts check-login               # 查登录状态
+python -m scripts creator-login --headless=false  # 登录创作者中心
+python -m scripts check-creator-login       # 查创作者中心登录状态
 python -m scripts profiles                  # 列出本地账号 profile
 python -m scripts selectors                 # 列出浏览器选择器契约
 python -m scripts contracts                 # 列出 CLI JSON 输出契约
@@ -73,6 +75,8 @@ python -m scripts contracts --command=search
 `contracts` 是只读命令，用来查看 CLI JSON 输出契约。Agent 接入时优先按这些字段解析。
 
 ## 发布
+
+主站与创作者中心可能要求分别登录。发布前先运行 `check-creator-login`，如未登录则运行 `creator-login --headless=false`。
 
 ```bash
 # 图文

@@ -13,9 +13,10 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
 from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .login import CREATOR_PUBLISH_URL
 from ._utils import is_element_blocked
 
-PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
+PUBLISH_URL = CREATOR_PUBLISH_URL
 
 
 @dataclass
@@ -42,6 +43,11 @@ class PublishAction:
         print("打开创作者中心发布页...", file=sys.stderr)
         self.client.navigate(PUBLISH_URL)
         time.sleep(3)
+        if "/login" in self.client.page.url:
+            raise RuntimeError(
+                "创作者中心未登录，请先运行 "
+                "xiaohongshu-skill creator-login --headless=false"
+            )
 
     def _click_publish_tab(self, tab_name: str):
         """点击发布类型 TAB（上传图文 / 上传视频）

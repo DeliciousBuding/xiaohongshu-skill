@@ -19,6 +19,8 @@ from .profiles import env_profile, profile_paths
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 QRCODE_DIR = os.path.join(SKILL_DIR, "data")
 QRCODE_PATH = os.path.join(QRCODE_DIR, "qrcode.png")
+CREATOR_PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
+CREATOR_READY_SELECTOR = 'div.upload-content, div.creator-tab, input[type="file"]'
 
 
 class LoginAction:
@@ -44,23 +46,22 @@ class LoginAction:
             self.client.navigate("https://www.xiaohongshu.com/explore")
             time.sleep(3)
 
-        # ---- 方式 1：检测页面上是否弹出了登录弹窗 ----
-        # 如果弹窗的二维码区域可见 → 未登录
-        try:
-            qr = page.locator('img.qrcode-img[src^="data:image"]')
-            if qr.count() > 0 and qr.first.is_visible():
-                return False, None
-        except Exception:
-            pass
-
-        # ---- 方式 2：检查 cookie 里是否包含 web_session ----
+        # ---- 方式 1：检查 cookie 里是否包含 web_session ----
+        # 登录弹窗可能在已登录页面上残留，不能优先于有效会话判断。
         try:
             cookies = self.client.context.cookies()
             has_session = any(c['name'] == 'web_session' for c in cookies)
             if has_session:
-                # 尝试获取用户名
                 username = self._try_get_username()
                 return True, username or "已登录用户"
+        except Exception:
+            pass
+
+        # ---- 方式 2：检测页面上是否弹出了登录弹窗 ----
+        try:
+            qr = page.locator('img.qrcode-img[src^="data:image"]')
+            if qr.count() > 0 and qr.first.is_visible():
+                return False, None
         except Exception:
             pass
 
@@ -75,6 +76,27 @@ class LoginAction:
             pass
 
         return False, None
+
+    def check_creator_login_status(self, navigate: bool = True) -> bool:
+        """检查创作者中心的独立登录状态。"""
+        if navigate:
+            self.client.navigate(CREATOR_PUBLISH_URL)
+            time.sleep(3)
+
+        page = self.client.page
+        if "/login" in page.url:
+            return False
+        return page.locator(CREATOR_READY_SELECTOR).count() > 0
+
+    def wait_for_creator_login(self, timeout: int = 240) -> bool:
+        """等待用户在可见浏览器中完成创作者中心登录。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.check_creator_login_status(navigate=False):
+                self.client._save_cookies()
+                return True
+            time.sleep(2)
+        return False
 
     def _try_get_username(self) -> Optional[str]:
         """尝试从页面提取用户昵称"""
@@ -215,6 +237,51 @@ def check_login(
         client.start()
         action = LoginAction(client)
         return action.check_login_status(navigate=True)
+    finally:
+        client.close()
+
+
+def check_creator_login(
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+) -> bool:
+    """检查创作者中心登录状态。"""
+    client = XiaohongshuClient(headless=True, cookie_path=cookie_path)
+    try:
+        client.start()
+        return LoginAction(client).check_creator_login_status(navigate=True)
+    finally:
+        client.close()
+
+
+def creator_login(
+    headless: bool = False,
+    cookie_path: str = DEFAULT_COOKIE_PATH,
+    timeout: int = 240,
+) -> Dict[str, Any]:
+    """打开创作者中心，等待用户完成手机号验证码登录。"""
+    client = XiaohongshuClient(headless=headless, cookie_path=cookie_path)
+    try:
+        client.start()
+        action = LoginAction(client)
+        if action.check_creator_login_status(navigate=True):
+            return {
+                "status": "logged_in",
+                "message": "创作者中心已登录",
+            }
+        if headless:
+            return {
+                "status": "login_required",
+                "message": "创作者中心需要可见浏览器登录，请使用 --headless=false",
+            }
+        if action.wait_for_creator_login(timeout=timeout):
+            return {
+                "status": "logged_in",
+                "message": "创作者中心登录成功",
+            }
+        return {
+            "status": "timeout",
+            "message": "创作者中心登录超时",
+        }
     finally:
         client.close()
 

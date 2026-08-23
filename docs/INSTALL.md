@@ -19,6 +19,8 @@ pip install -r requirements.txt
 playwright install chromium
 python -m scripts qrcode --headless=false
 python -m scripts check-login
+python -m scripts creator-login --headless=false
+python -m scripts check-creator-login
 ```
 
 On macOS or Linux:
@@ -30,6 +32,8 @@ pip install -r requirements.txt
 playwright install chromium
 python -m scripts qrcode --headless=false
 python -m scripts check-login
+python -m scripts creator-login --headless=false
+python -m scripts check-creator-login
 ```
 
 For Linux servers, install browser dependencies once:
@@ -44,6 +48,7 @@ playwright install-deps chromium
 pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
 playwright install chromium
 xiaohongshu-skill qrcode --headless=false
+xiaohongshu-skill creator-login --headless=false
 xiaohongshu-skill search "美食" --limit=5
 ```
 
@@ -101,10 +106,12 @@ git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.openclaw/s
 
 ```bash
 python -m scripts check-login
+python -m scripts check-creator-login
 python -m scripts search "咖啡" --limit=3
 ```
 
 Expected output is JSON. If login is false, run QR login again in headed mode.
+Creator Center may require a separate phone verification session before publishing. If `check-creator-login` is false, run `creator-login --headless=false`.
 
 ## Account Profiles
 

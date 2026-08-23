@@ -19,10 +19,18 @@ class TestNavigateToPublish:
 
     def test_navigate_calls_correct_url(self):
         """导航到创作者中心发布页"""
+        self.client.page.url = "https://creator.xiaohongshu.com/publish/publish?source=official"
         self.action._navigate_to_publish()
         self.client.navigate.assert_called_once_with(
             "https://creator.xiaohongshu.com/publish/publish?source=official"
         )
+
+    def test_navigate_fails_fast_when_creator_login_is_required(self):
+        """创作者中心未登录时应给出明确指引。"""
+        self.client.page.url = "https://creator.xiaohongshu.com/login?redirectReason=401"
+
+        with pytest.raises(RuntimeError, match="creator-login"):
+            self.action._navigate_to_publish()
 
 
 class TestClickPublishTab:

@@ -128,6 +128,34 @@ class TestCLIProfiles:
         assert parsed["profiles"][0]["name"] == "default"
 
 
+class TestCLICreatorLogin:
+    """创作者中心登录命令测试。"""
+
+    @patch("scripts.__main__.login.creator_login")
+    def test_creator_login_command(self, mock_creator_login, capsys):
+        mock_creator_login.return_value = {
+            "status": "logged_in",
+            "message": "创作者中心登录成功",
+        }
+
+        with patch("sys.argv", ["scripts", "creator-login", "--timeout", "60"]):
+            exit_code = main()
+
+        assert exit_code == 0
+        assert mock_creator_login.call_args.kwargs["headless"] is False
+        assert mock_creator_login.call_args.kwargs["timeout"] == 60
+        assert json.loads(capsys.readouterr().out)["status"] == "logged_in"
+
+    @patch("scripts.__main__.login.check_creator_login", return_value=True)
+    def test_check_creator_login_command(self, mock_check, capsys):
+        with patch("sys.argv", ["scripts", "check-creator-login"]):
+            exit_code = main()
+
+        assert exit_code == 0
+        mock_check.assert_called_once()
+        assert json.loads(capsys.readouterr().out) == {"is_logged_in": True}
+
+
 class TestCLISelectors:
     """测试 selector contract 命令"""
 

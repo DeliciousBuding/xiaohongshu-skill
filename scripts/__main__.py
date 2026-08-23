@@ -157,6 +157,24 @@ def cmd_check_login(args):
     return 0
 
 
+def cmd_creator_login(args):
+    """登录创作者中心。"""
+    result = login.creator_login(
+        headless=_headless(args),
+        cookie_path=_cookie_path(args),
+        timeout=args.timeout,
+    )
+    print(format_output(result))
+    return 0 if result["status"] == "logged_in" else 1
+
+
+def cmd_check_creator_login(args):
+    """检查创作者中心登录状态。"""
+    is_logged_in = login.check_creator_login(cookie_path=_cookie_path(args))
+    print(format_output({"is_logged_in": is_logged_in}))
+    return 0
+
+
 def cmd_logout(args):
     """删除登录状态"""
     result = login.logout(cookie_path=_cookie_path(args), user_data_dir=_user_data_dir(args))
@@ -561,6 +579,23 @@ def main():
     chk_p = subparsers.add_parser("check-login", help="检查登录状态")
     chk_p.add_argument("--headless", default='true')
     chk_p.set_defaults(func=cmd_check_login)
+
+    # creator-login
+    creator_login_p = subparsers.add_parser(
+        "creator-login",
+        help="登录创作者中心（发布前需要）",
+    )
+    creator_login_p.add_argument("--timeout", "-t", type=int, default=240, help="登录超时秒数")
+    creator_login_p.add_argument("--headless", default='false', help="默认 false 以显示浏览器")
+    creator_login_p.set_defaults(func=cmd_creator_login)
+
+    # check-creator-login
+    creator_check_p = subparsers.add_parser(
+        "check-creator-login",
+        help="检查创作者中心登录状态",
+    )
+    creator_check_p.add_argument("--headless", default='true')
+    creator_check_p.set_defaults(func=cmd_check_creator_login)
 
     # logout
     logout_p = subparsers.add_parser("logout", help="删除登录状态（Cookie 和浏览器数据）")
