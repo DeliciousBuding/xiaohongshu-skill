@@ -7,7 +7,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from scripts.client import XiaohongshuClient
-from scripts.publish import PublishAction
+from scripts.publish import (
+    PUBLISH_STATUS_CONFIRMED,
+    PUBLISH_STATUS_FAILED,
+    PUBLISH_STATUS_SUBMITTED_UNCONFIRMED,
+    PUBLISH_URL,
+    PublishAction,
+    PublishConfirmation,
+    PublishValidation,
+)
 
 
 class TestNavigateToPublish:
@@ -214,6 +222,14 @@ class TestPublishImage:
         self.client = MagicMock(spec=XiaohongshuClient)
         self.client.page = MagicMock()
         self.action = PublishAction(self.client)
+        self.validation_patcher = patch(
+            "scripts.publish.validate_publish_request",
+            return_value=PublishValidation(schedule_at=None, warnings=()),
+        )
+        self.mock_validate = self.validation_patcher.start()
+
+    def teardown_method(self):
+        self.validation_patcher.stop()
 
     @patch.object(PublishAction, '_navigate_to_publish')
     @patch.object(PublishAction, '_click_publish_tab')
@@ -245,8 +261,16 @@ class TestPublishImage:
     @patch.object(PublishAction, '_fill_title')
     @patch.object(PublishAction, '_fill_content')
     @patch.object(PublishAction, '_check_publish_ready')
-    @patch.object(PublishAction, '_click_publish_button', return_value=True)
-    def test_publish_image_auto(self, mock_click, mock_ready, mock_content,
+    @patch.object(
+        PublishAction,
+        '_publish_and_confirm',
+        return_value=PublishConfirmation(
+            status=PUBLISH_STATUS_CONFIRMED,
+            message='已确认',
+            signal='success_feedback',
+        ),
+    )
+    def test_publish_image_auto(self, mock_confirm, mock_ready, mock_content,
                                  mock_title, mock_upload, mock_tab, mock_nav):
         """图文发布（自动发布成功）"""
         mock_ready.return_value = {"title": "测试", "title_ok": True}
@@ -257,9 +281,10 @@ class TestPublishImage:
             image_paths=["img.jpg"],
             auto_publish=True,
         )
-        assert result["status"] == "success"
+        assert result["status"] == PUBLISH_STATUS_CONFIRMED
         assert result["published"] is True
-        mock_click.assert_called_once()
+        assert result["success"] is True
+        mock_confirm.assert_called_once()
 
     @patch.object(PublishAction, '_navigate_to_publish')
     @patch.object(PublishAction, '_click_publish_tab')
@@ -289,6 +314,14 @@ class TestPublishVideo:
         self.client = MagicMock(spec=XiaohongshuClient)
         self.client.page = MagicMock()
         self.action = PublishAction(self.client)
+        self.validation_patcher = patch(
+            "scripts.publish.validate_publish_request",
+            return_value=PublishValidation(schedule_at=None, warnings=()),
+        )
+        self.mock_validate = self.validation_patcher.start()
+
+    def teardown_method(self):
+        self.validation_patcher.stop()
 
     @patch.object(PublishAction, '_navigate_to_publish')
     @patch.object(PublishAction, '_click_publish_tab')
@@ -318,8 +351,16 @@ class TestPublishVideo:
     @patch.object(PublishAction, '_fill_title')
     @patch.object(PublishAction, '_fill_content')
     @patch.object(PublishAction, '_check_publish_ready')
-    @patch.object(PublishAction, '_click_publish_button', return_value=False)
-    def test_publish_video_auto_fail(self, mock_click, mock_ready, mock_content,
+    @patch.object(
+        PublishAction,
+        '_publish_and_confirm',
+        return_value=PublishConfirmation(
+            status=PUBLISH_STATUS_FAILED,
+            message='点击失败',
+            signal='click_failed',
+        ),
+    )
+    def test_publish_video_auto_fail(self, mock_confirm, mock_ready, mock_content,
                                       mock_title, mock_upload, mock_tab, mock_nav):
         """视频发布（自动发布失败）"""
         mock_ready.return_value = {"title": "视频", "title_ok": True}
@@ -330,8 +371,10 @@ class TestPublishVideo:
             video_path="video.mp4",
             auto_publish=True,
         )
-        assert result["status"] == "error"
+        assert result["status"] == PUBLISH_STATUS_FAILED
         assert result["published"] is False
+        assert result["success"] is False
+        mock_confirm.assert_called_once()
 
 
 class TestClickPublishButton:
@@ -367,6 +410,239 @@ class TestClickPublishButton:
 
         result = self.action._click_publish_button()
         assert result is False
+
+
+class TestPublishConfirmation:
+    """测试发布按钮点击后的可信状态判定。"""
+
+    def setup_method(self):
+        self.client = MagicMock(spec=XiaohongshuClient)
+        self.client.page = MagicMock()
+        self.client.page.url = PUBLISH_URL
+        feedback = MagicMock()
+        feedback.count.return_value = 0
+        self.client.page.get_by_text.return_value = feedback
+        self.action = PublishAction(self.client)
+
+    @staticmethod
+    def _fake_clock():
+        current = [0.0]
+
+        def monotonic():
+            return current[0]
+
+        def sleep(seconds):
+            current[0] += seconds
+
+        return monotonic, sleep
+
+    @patch.object(PublishAction, '_click_publish_button', return_value=True)
+    def test_click_without_confirmation_is_not_success(self, mock_click):
+        """点击成功但无确认信号时必须返回未确认且 success=false。"""
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._publish_and_confirm(
+            timeout=1.0,
+            poll_interval=0.5,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+        result = self.action._confirmation_fields(confirmation)
+
+        assert result["status"] == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+        assert result["success"] is False
+        assert result["published"] is False
+        assert result["confirmation_signal"] == "confirmation_timeout"
+        mock_click.assert_called_once()
+
+    @patch.object(PublishAction, '_click_publish_button', return_value=False)
+    def test_click_failure_is_failed(self, mock_click):
+        confirmation = self.action._publish_and_confirm()
+
+        assert confirmation.status == PUBLISH_STATUS_FAILED
+        assert confirmation.success is False
+        assert confirmation.signal == "click_failed"
+        mock_click.assert_called_once()
+
+    def test_success_feedback_confirms_publish(self):
+        feedback = MagicMock()
+        feedback.count.return_value = 1
+        feedback.nth.return_value.is_visible.return_value = True
+        self.client.page.get_by_text.return_value = feedback
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_CONFIRMED
+        assert confirmation.signal == "success_feedback"
+        assert confirmation.success is True
+
+    def test_url_leaving_publish_flow_confirms_publish(self):
+        self.client.page.url = "https://creator.xiaohongshu.com/creator/home"
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_CONFIRMED
+        assert confirmation.signal == "url_left_publish_flow"
+
+    @pytest.mark.parametrize(
+        ("url", "signal"),
+        [
+            ("https://creator.xiaohongshu.com/login", "login_redirect"),
+            ("https://www.xiaohongshu.com/website-login/captcha", "captcha_redirect"),
+        ],
+    )
+    def test_auth_redirect_is_failed_before_url_confirmation(self, url, signal):
+        self.client.page.url = url
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_FAILED
+        assert confirmation.signal == signal
+        assert confirmation.success is False
+
+    @patch.object(PublishAction, '_click_publish_button', return_value=True)
+    def test_stale_success_feedback_is_not_new_confirmation(self, mock_click):
+        feedback = MagicMock()
+        feedback.count.return_value = 1
+        feedback.nth.return_value.is_visible.return_value = True
+        self.client.page.get_by_text.return_value = feedback
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._publish_and_confirm(
+            timeout=1.0,
+            poll_interval=0.5,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+        mock_click.assert_called_once()
+
+    def test_same_url_security_challenge_is_failed(self):
+        self.client._check_captcha.return_value = True
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_FAILED
+        assert confirmation.signal == "captcha_detected"
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://example.com/success",
+            "https://creator.xiaohongshu.com/error",
+            "https://creator.xiaohongshu.com/404",
+        ],
+    )
+    def test_untrusted_or_error_destination_is_not_confirmation(self, url):
+        self.client.page.url = url
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            poll_interval=0.5,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+
+    def test_publish_query_change_is_not_confirmation(self):
+        self.client.page.url = f"{PUBLISH_URL}&draft=1"
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            poll_interval=0.5,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+
+    def test_non_http_intermediate_page_is_not_confirmation(self):
+        self.client.page.url = "about:blank"
+        monotonic, sleep = self._fake_clock()
+
+        confirmation = self.action._wait_for_publish_confirmation(
+            initial_url=PUBLISH_URL,
+            timeout=1.0,
+            poll_interval=0.5,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+        assert confirmation.status == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+
+
+class TestPublishLongform:
+    """测试长文入口也使用统一校验和发布确认。"""
+
+    def setup_method(self):
+        self.client = MagicMock(spec=XiaohongshuClient)
+        self.client.page = MagicMock()
+        empty = MagicMock()
+        empty.count.return_value = 0
+        self.client.page.get_by_text.return_value = empty
+        self.client.page.locator.return_value = empty
+        self.action = PublishAction(self.client)
+
+    @patch("scripts.publish.validate_publish_request")
+    @patch.object(PublishAction, '_navigate_to_publish')
+    @patch.object(
+        PublishAction,
+        '_publish_and_confirm',
+        return_value=PublishConfirmation(
+            status=PUBLISH_STATUS_SUBMITTED_UNCONFIRMED,
+            message='待人工复核',
+            signal='confirmation_timeout',
+        ),
+    )
+    def test_longform_auto_uses_common_confirmation(
+        self,
+        mock_confirm,
+        mock_nav,
+        mock_validate,
+    ):
+        mock_validate.return_value = PublishValidation(schedule_at=None, warnings=())
+
+        result = self.action.publish_longform(
+            title="长文标题",
+            content="长文正文",
+            auto_publish=True,
+        )
+
+        assert result["status"] == PUBLISH_STATUS_SUBMITTED_UNCONFIRMED
+        assert result["success"] is False
+        assert result["published"] is False
+        mock_validate.assert_called_once_with(title="长文标题")
+        mock_confirm.assert_called_once()
 
 
 class TestUploadImages:
