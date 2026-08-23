@@ -5,15 +5,15 @@
 支持生成微信登录二维码，保存供主模型发送
 """
 
-import sys
-import time
 import base64
 import os
-from typing import Optional, Tuple, Dict, Any
+import sys
+import time
+from typing import Any, Dict, Optional, Tuple
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 from .profiles import env_profile, profile_paths
-
+from .selectors import LOGIN_PROFILE_LINK_CONTRACT, LOGIN_QRCODE_CONTRACT
 
 # QRCode 图片保存目录 - 放在 skill 文件夹内
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +23,9 @@ QRCODE_PATH = os.path.join(QRCODE_DIR, "qrcode.png")
 
 class LoginAction:
     """登录动作"""
+
+    QRCODE_SELECTOR = LOGIN_QRCODE_CONTRACT.primary
+    PROFILE_LINK_SELECTOR = LOGIN_PROFILE_LINK_CONTRACT.primary
 
     def __init__(self, client: XiaohongshuClient):
         self.client = client
@@ -47,7 +50,7 @@ class LoginAction:
         # ---- 方式 1：检测页面上是否弹出了登录弹窗 ----
         # 如果弹窗的二维码区域可见 → 未登录
         try:
-            qr = page.locator('img.qrcode-img[src^="data:image"]')
+            qr = page.locator(self.QRCODE_SELECTOR)
             if qr.count() > 0 and qr.first.is_visible():
                 return False, None
         except Exception:
@@ -67,7 +70,7 @@ class LoginAction:
         # ---- 方式 3：检查 HTML 里有没有用户头像链接（登录后才有） ----
         try:
             # 侧边栏会有 /user/profile/xxx 的链接
-            profile_link = page.locator('a[href*="/user/profile/"]')
+            profile_link = page.locator(self.PROFILE_LINK_SELECTOR)
             if profile_link.count() > 0:
                 username = self._try_get_username()
                 return True, username or "已登录用户"
@@ -115,7 +118,7 @@ class LoginAction:
         qrcode_src = None
         for attempt in range(5):
             try:
-                qr = page.locator('img.qrcode-img[src^="data:image"]')
+                qr = page.locator(self.QRCODE_SELECTOR)
                 if qr.count() > 0:
                     src = qr.first.get_attribute('src')
                     if src and len(src) > 200:  # 有效 base64 至少上百字符
