@@ -6,7 +6,10 @@ import argparse
 import sys
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ImportError:  # Python 3.10
+    import tomli as tomllib
 
 from . import __version__
 

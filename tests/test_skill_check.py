@@ -2,6 +2,10 @@
 
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("skills_ref")
+
 from scripts.skill_check import main, validate_skill_file
 
 
