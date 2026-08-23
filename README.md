@@ -3,7 +3,7 @@
 [![CI](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/DeliciousBuding/xiaohongshu-skill)](https://github.com/DeliciousBuding/xiaohongshu-skill/releases)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
 
 面向 AI Agent 和命令行用户的小红书浏览器工具箱。它通过 Python Playwright 提供搜索、详情读取、推荐流、登录、发布、评论、点赞、收藏、模板、策略和 SOP 能力。
 
@@ -164,6 +164,6 @@ CI 还会测试 Python 3.10、3.11、3.12，构建 wheel 和源码包，并验�
 
 ## 来源与许可证
 
-仓库原创代码按 [MIT License](LICENSE) 发布。部分浏览器行为参考或改写自 Apache-2.0 项目 `xpzouying/xiaohongshu-mcp`，详情见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+仓库原创代码按 [Apache License 2.0](LICENSE) 发布。部分浏览器行为参考或改写自 Apache-2.0 项目 `xpzouying/xiaohongshu-mcp`，详情见 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
 本项目与小红书官方无隶属或授权关系。使用者应自行遵守适用的平台规则、法律法规和账号安全要求。

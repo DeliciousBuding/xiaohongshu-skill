@@ -60,7 +60,7 @@ Use `SoftwareApplication` JSON-LD. Include:
 - `applicationSubCategory`: `AgentSkill`
 - `operatingSystem`: `Windows, macOS, Linux`
 - `programmingLanguage`: `Python`
-- `license`: `MIT`
+- `license`: `Apache-2.0`
 - `codeRepository`: `https://github.com/DeliciousBuding/xiaohongshu-skill`
 - `sameAs`: GitHub, skills.sh, and `llms.txt`
 

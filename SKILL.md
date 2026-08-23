@@ -1,7 +1,7 @@
 ---
 name: xiaohongshu-skill
 description: 小红书 / Xiaohongshu / RedNote AI Agent Skill。用 Python Playwright 搜索和读取内容、管理登录会话、发布图文/视频/长文、评论、点赞和收藏；默认输出 JSON，任何写操作都必须先获得用户确认。用户提到 xiaohongshu、小红书、rednote、小红书搜索、发到小红书、小红书笔记分析、小红书运营或小红书自动化时触发。
-license: MIT
+license: Apache-2.0
 compatibility: Requires Python 3.10 or newer and Playwright Chromium. Supports Windows, macOS, and Linux.
 metadata:
   openclaw:
