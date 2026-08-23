@@ -38,3 +38,9 @@ cookies.json
 
 # Testing
 .pytest_cache/
+
+# Tooling and worktrees
+.ruff_cache/
+.coverage
+htmlcov/
+.worktrees/

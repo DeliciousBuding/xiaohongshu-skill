@@ -57,3 +57,27 @@ def test_strategy_contracts_match_real_outputs(tmp_path):
     for command, payload in outputs.items():
         contract = get_output_contract(command)
         assert set(contract.required_fields) <= payload.keys(), command
+
+
+def test_publish_contracts_describe_confirmation_states():
+    for command in ("publish", "publish-video", "publish-longform"):
+        contract = get_output_contract(command)
+        assert {"success", "published", "warnings"} <= set(contract.required_fields)
+        assert "submitted_unconfirmed" in contract.notes
+        assert "never retry" in contract.notes
+
+    video_contract = get_output_contract("publish-video")
+    assert "schedule_time" in video_contract.required_fields
+
+def test_creator_login_contracts_are_registered():
+    """Creator Center commands should have documented output contracts."""
+    creator_login = get_output_contract("creator-login")
+    assert creator_login.name == "creator_login.result"
+    assert set(creator_login.required_fields) == {"status", "message"}
+    assert "logged_in" in creator_login.notes
+    assert "login_required" in creator_login.notes
+    assert "timeout" in creator_login.notes
+
+    check_creator_login = get_output_contract("check-creator-login")
+    assert check_creator_login.name == "check_creator_login.status"
+    assert set(check_creator_login.required_fields) == {"is_logged_in"}

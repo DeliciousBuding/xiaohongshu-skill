@@ -4,7 +4,7 @@ Live/e2e test gate tests.
 
 import pytest
 
-from scripts.test_gate import should_run_live_tests, live_skip_reason
+from scripts.test_gate import live_skip_reason, should_run_live_tests
 
 
 @pytest.mark.parametrize(

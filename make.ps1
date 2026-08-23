@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("check", "test", "lint", "docs-check", "live", "site", "contracts")]
+    [ValidateSet("check", "test", "lint", "docs-check", "live", "site", "contracts", "skill")]
     [string]$Task = "check"
 )
 

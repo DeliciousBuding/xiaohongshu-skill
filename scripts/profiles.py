@@ -9,7 +9,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-
 DEFAULT_PROFILE = "default"
 DEFAULT_ROOT = Path(os.path.expanduser("~/.xiaohongshu"))
 PROFILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -23,6 +22,7 @@ class ProfileNameError(ValueError):
 class ProfilePaths:
     cookie_path: Path
     user_data_dir: Path
+    session_path: Path
 
 
 def _normalize_profile(profile: str | None) -> str:
@@ -45,12 +45,14 @@ def profile_paths(profile: str | None = None, root: str | Path | None = None) ->
         return ProfilePaths(
             cookie_path=root_path / "cookies.json",
             user_data_dir=root_path / "browser-data",
+            session_path=root_path / "session.json",
         )
 
     profile_dir = root_path / "profiles" / name
     return ProfilePaths(
         cookie_path=profile_dir / "cookies.json",
         user_data_dir=profile_dir / "browser-data",
+        session_path=profile_dir / "session.json",
     )
 
 
@@ -70,7 +72,11 @@ def list_profiles(root: str | Path | None = None) -> list[dict[str, object]]:
     profiles: list[dict[str, object]] = []
 
     default_paths = profile_paths(DEFAULT_PROFILE, root=root_path)
-    if default_paths.cookie_path.exists() or default_paths.user_data_dir.exists():
+    if (
+        default_paths.cookie_path.exists()
+        or default_paths.user_data_dir.exists()
+        or default_paths.session_path.exists()
+    ):
         profiles.append(_profile_info(DEFAULT_PROFILE, default_paths))
 
     profiles_dir = root_path / "profiles"
@@ -80,7 +86,11 @@ def list_profiles(root: str | Path | None = None) -> list[dict[str, object]]:
             if not PROFILE_RE.match(name):
                 continue
             paths = profile_paths(name, root=root_path)
-            if paths.cookie_path.exists() or paths.user_data_dir.exists():
+            if (
+                paths.cookie_path.exists()
+                or paths.user_data_dir.exists()
+                or paths.session_path.exists()
+            ):
                 profiles.append(_profile_info(name, paths))
 
     return profiles

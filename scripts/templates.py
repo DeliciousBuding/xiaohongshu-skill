@@ -6,8 +6,7 @@
 """
 
 import random
-from typing import Optional, Dict, Any, List
-
+from typing import Any, Dict, List, Optional
 
 # ============================================================
 # 内置数据

@@ -5,13 +5,13 @@
 """
 
 import json
+import random
 import sys
 import time
-import random
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 from ._utils import make_feed_url
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 
 class FeedDetailAction:

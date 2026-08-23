@@ -5,29 +5,118 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.12.4"
+  UV_FROZEN: "1"
 
 jobs:
-  test:
+  quality:
+    name: quality
     runs-on: ubuntu-latest
-
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: 设置 Python 3.11
-        uses: actions/setup-python@v6
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
+          version: ${{ env.UV_VERSION }}
           python-version: "3.11"
+          enable-cache: true
 
-      - name: 安装依赖
+      - name: Sync development environment
+        run: uv sync --frozen --group dev
+
+      - name: Run repository quality gates
+        run: uv run python -m scripts.quality check
+
+  tests:
+    name: tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Sync development environment
+        run: uv sync --frozen --group dev
+
+      - name: Run unit and contract tests
+        run: uv run pytest -q
+
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Validate distribution metadata
+        run: uvx --from twine==7.0.0 twine check dist/*
+
+      - name: Install and smoke-test wheel
+        shell: bash
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          uv venv .smoke --python 3.11
+          uv pip install --python .smoke/bin/python dist/*.whl
+          .smoke/bin/xiaohongshu-skill --version
+          .smoke/bin/xiaohongshu-skill --help >/dev/null
 
-      - name: 安装 Playwright Chromium
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: 质量检查
-        run: python -m scripts.quality check
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+
+      - name: Build container image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          push: false
+          tags: xiaohongshu-skill:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0

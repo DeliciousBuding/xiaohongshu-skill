@@ -5,13 +5,13 @@
 整合 xiaohongshu-ops 的安全评论理念（长度校验、人性化延迟、频率检测）
 """
 
+import random
 import sys
 import time
-import random
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 from ._utils import make_feed_url
+from .client import DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 # 评论安全常量（来自 xiaohongshu-ops）
 MAX_COMMENT_LENGTH = 280

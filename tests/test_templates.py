@@ -4,8 +4,10 @@
 
 
 from scripts.templates import (
-    TemplateEngine, generate_template,
-    MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH,
+    MAX_CONTENT_LENGTH,
+    MAX_TITLE_LENGTH,
+    TemplateEngine,
+    generate_template,
 )
 
 

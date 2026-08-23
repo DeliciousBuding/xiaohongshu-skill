@@ -7,7 +7,8 @@ Use this project as a local Skill folder or call the CLI from Cursor's agent she
 ```bash
 git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
 cd xiaohongshu-skill
-pip install -r requirements.txt
+uv sync --frozen --no-dev
+uv run playwright install chromium
 playwright install chromium
 python -m scripts qrcode --headless=false
 ```

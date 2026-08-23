@@ -1,56 +1,46 @@
 # AGENTS.md
 
-xiaohongshu-skill 是小红书 AI Agent 工具箱。本项目兼容 [AgentSkills](https://agentskills.io) 规范。
+xiaohongshu-skill is a Xiaohongshu browser toolkit and Agent Skill. `SKILL.md` is the agent entry point; public product and technical documentation lives in `README.md` and `docs/`.
 
-## AI Agent 工作约定
+## Safety
 
-1. **读写操作分离**：`search` / `feed` / `user` / `explore` / `me` / `check-login` 是只读的，可以放心跑。`publish` / `comment` / `reply` / `like` / `collect` 会改动账号数据，**必须先让用户确认**，用 `AskUserQuestion` 弹确认框。
-2. **CLI 优先**：所有功能通过 `python -m scripts <command>` 调用。不要直接 import 脚本模块。
-3. **Cookie 生命周期**：首次使用前跑 `qrcode --headless=false` 扫码登录。Cookie 过期（几天到一周）`check-login` 会返回 false，重登就行。
-4. **频率控制别关**：内置 3-6s 导航间隔、5 次请求 10s 冷却。强制跳过会触发验证码。
-5. **xsec_token**：跟会话绑定的安全参数，始终从搜索结果/用户数据里拿最新的，别缓存。
-6. **安全第一**：本工具操作真实小红书账号。不确定的时候问用户，别自己猜。
+- Read-only commands: `search`, `feed`, `user`, `me`, `explore`, `check-login`, `profiles`, `selectors`, `contracts`.
+- Account-changing commands require explicit user confirmation before execution.
+- Stop on captcha, login, or security-verification pages.
+- Never expose local account state, authentication values, QR codes, or complete security parameters.
+- `submitted_unconfirmed` is not success and must not be retried automatically.
 
-## 目录结构
+## Execution
 
-```
-xiaohongshu-skill/
-├── AGENTS.md             # 本文件
-├── SKILL.md              # Skill 规范（Agent 自动加载）
-├── README.md             # 中文项目文档
-├── CONTRIBUTING.md       # 贡献指南
-├── Dockerfile            # Docker 构建文件
-├── docker-compose.yml    # Docker Compose 配置
-├── .env.example          # 环境变量模板
-├── scripts/              # 核心源码
-│   ├── __main__.py       # CLI 入口（22+ 子命令）
-│   ├── client.py         # 浏览器客户端（Playwright 封装）
-│   ├── _utils.py         # 公共工具函数
-│   └── ...
-├── tests/                # 单元测试（pytest）
-├── examples/             # 平台集成示例
-└── docs/                 # 文档
+Use the JSON CLI instead of importing action modules directly:
+
+```bash
+uv run python -m scripts <command>
 ```
 
-## 开发约定
+Use `--profile <name>` for account isolation. Identifiers and `xsec_token` values should come from the current browser session.
 
-- Python 3.10+，Playwright >= 1.40.0
-- 遵循 PEP 8，不做过度抽象
-- 新功能带测试（pytest）
-- Conventional Commits（feat/fix/docs/chore/test/refactor）
-- 改 `client.py` 要跑默认质量门：`python -m scripts.quality check`
-- 改浏览器选择器时同步 `scripts/selectors.py`，并跑 `python -m pytest tests/test_selectors.py -q`
-- 改 CLI 输出字段时同步 `scripts/output_contracts.py`，并跑 `python -m pytest tests/test_output_contracts.py -q`
-- `live` / `e2e` 测试默认跳过。真实站点测试必须显式设置 `XHS_LIVE_TEST=1`
-- 提交前跑：`python -m scripts.quality check`
-- 改契约或选择器时额外跑：`python -m scripts.quality contracts`
-- Windows 可用 `.\make.ps1 check` 跑默认门禁
+## Development
 
-## 平台兼容
+- Python 3.10 to 3.12.
+- Dependencies: `pyproject.toml` and committed `uv.lock`.
+- Default gate: `uv run python -m scripts.quality check`.
+- Live tests are opt-in with `XHS_LIVE_TEST=1` and should use a dedicated account.
+- New public behavior requires tests.
+- Use Conventional Commits.
 
-`SKILL.md` 按 AgentSkills 开放规范编写，兼容：
-- Claude Code
-- OpenClaw
-- Codex
-- Hermes Agent
-- 其他支持 AgentSkills 的平台
+When changing selectors, use `scripts/selectors.py` as the source of truth and run `tests/test_selectors.py`. When changing JSON fields or statuses, update `scripts/output_contracts.py` and its tests.
+
+## Architecture
+
+- CLI adapter: `scripts/__main__.py`
+- Browser session and local state: `scripts/client.py`, `scripts/profiles.py`, `scripts/session_store.py`
+- Actions: login, search, feed, user, publish, comment, interact, explore
+- Contracts: `scripts/selectors.py`, `scripts/output_contracts.py`
+- Workflows: templates, strategy, SOP
+
+See `docs/ARCHITECTURE.md` for boundaries and compatibility policy.
+
+## Public repository boundary
+
+Public files must contain only product behavior, public APIs, generic examples, and source attribution. Do not add private infrastructure, local workspace paths, internal operator notes, or credentials.

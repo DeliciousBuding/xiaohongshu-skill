@@ -7,7 +7,6 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-
 LIVE_TEST_ENV = "XHS_LIVE_TEST"
 TRUE_VALUES = {"1", "true", "yes", "y", "on"}
 

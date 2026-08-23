@@ -156,3 +156,59 @@ class TestCLIContracts:
         assert parsed["count"] == 1
         assert parsed["contracts"][0]["command"] == "search"
         assert parsed["contracts"][0]["required_fields"] == ["count", "results"]
+
+class TestPublishExitCodes:
+    def test_confirmed_and_ready_are_successful(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "confirmed"}) == 0
+        assert _publish_exit_code({"status": "ready"}) == 0
+
+    def test_unconfirmed_submission_is_indeterminate(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "submitted_unconfirmed"}) == 2
+
+    def test_failed_submission_is_failure(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "failed"}) == 1
+        assert _publish_exit_code({"status": "error"}) == 1
+
+class TestCLICreatorLogin:
+    """测试创作者中心登录子命令"""
+
+    @patch("scripts.__main__.login.creator_login")
+    def test_creator_login_logged_in_returns_zero(self, mock_creator_login, capsys):
+        mock_creator_login.return_value = {"status": "logged_in", "message": "已登录"}
+        with patch("sys.argv", ["scripts", "creator-login"]):
+            exit_code = main()
+        assert exit_code == 0
+        parsed = json.loads(capsys.readouterr().out)
+        assert parsed["status"] == "logged_in"
+
+    @patch("scripts.__main__.login.creator_login")
+    def test_creator_login_timeout_returns_one(self, mock_creator_login, capsys):
+        mock_creator_login.return_value = {"status": "timeout", "message": "超时"}
+        with patch("sys.argv", ["scripts", "creator-login"]):
+            exit_code = main()
+        assert exit_code == 1
+        parsed = json.loads(capsys.readouterr().out)
+        assert parsed["status"] == "timeout"
+
+    @patch("scripts.__main__.login.check_creator_login")
+    def test_check_creator_login_returns_zero(self, mock_check_creator_login, capsys):
+        mock_check_creator_login.return_value = True
+        with patch("sys.argv", ["scripts", "check-creator-login"]):
+            exit_code = main()
+        assert exit_code == 0
+        parsed = json.loads(capsys.readouterr().out)
+        assert parsed["is_logged_in"] is True
+
+    @patch("scripts.__main__.login.check_creator_login")
+    def test_check_creator_login_headless_wired_through(self, mock_check_creator_login, capsys):
+        mock_check_creator_login.return_value = False
+        with patch("sys.argv", ["scripts", "check-creator-login", "--headless", "false"]):
+            exit_code = main()
+        assert exit_code == 0
+        assert mock_check_creator_login.call_args.kwargs["headless"] is False

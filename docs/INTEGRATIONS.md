@@ -1,135 +1,93 @@
 # Integrations
 
-Last updated: 2026-07-06
+xiaohongshu-skill exposes one JSON CLI contract to agent hosts, editors, and workflow tools.
 
-`xiaohongshu-skill` exposes one plain CLI and one AgentSkill file. Agent platforms should call the CLI through the instructions in `SKILL.md`.
+## Command contract
 
-## Command Rules
+Run commands from the repository or installed Skill directory:
 
-- Read-only commands: `check-login`, `search`, `feed`, `user`, `me`, `explore`.
-- Profile inspection command: `profiles`.
-- Write commands: `publish`, `publish-video`, `publish-md`, `publish-longform`, `comment`, `reply`, `reply-notification`, `like`, `unlike`, `collect`, `uncollect`.
-- Agents must ask the user before any write command.
-- JSON output is the interface. Do not parse terminal prose.
-- Use `--profile <name>` when one machine operates more than one Xiaohongshu account.
+```bash
+uv run python -m scripts <command>
+```
+
+When installed globally:
+
+```bash
+xiaohongshu-skill <command>
+```
+
+Standard output contains JSON. Progress and diagnostics use standard error. Integrations should parse `status` and the published output contracts instead of matching human-readable messages.
 
 ## Claude Code
 
-Install:
-
-```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.claude/skills/xiaohongshu-skill
-cd ~/.claude/skills/xiaohongshu-skill
-pip install -r requirements.txt
-playwright install chromium
-python -m scripts qrcode --headless=false
-```
-
-Try:
-
-```text
-帮我搜下小红书上关于北京咖啡店的笔记，返回 5 条。
-```
-
-## Codex
-
-Install:
-
-```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.codex/skills/xiaohongshu-skill
-cd ~/.codex/skills/xiaohongshu-skill
-pip install -r requirements.txt
-playwright install chromium
-python -m scripts qrcode --headless=false
-```
-
-Use the same prompts as Claude Code. Codex should read `SKILL.md` and call `python -m scripts`.
-
-## skills.sh
-
-Install with the Skill CLI:
+Install with the Agent Skills CLI or clone into the Claude Skills directory:
 
 ```bash
 npx skills add DeliciousBuding/xiaohongshu-skill
 ```
 
-Public page:
+Manual location:
 
 ```text
-https://www.skills.sh/deliciousbuding/xiaohongshu-skill
+~/.claude/skills/xiaohongshu-skill
 ```
 
-The skills.sh listing is generated from the GitHub repository. Reinstall with the CLI after public metadata changes if the page has not refreshed yet.
+The agent must request explicit confirmation before write commands.
+
+## Codex and Cursor
+
+Install into the shared Agent Skills view:
+
+```text
+~/.agents/skills/xiaohongshu-skill
+```
+
+The Skill frontmatter is validated against the Agent Skills reference implementation. Runtime commands remain the same across supported hosts.
 
 ## OpenClaw and ClawHub
-
-Preferred install:
 
 ```bash
 clawhub install xiaohongshu-skill
 ```
 
-Manual install:
+The OpenClaw metadata declares supported operating systems and a Python runtime requirement. Python dependencies and Playwright Chromium still need to be installed in the Skill directory.
+
+## skills.sh
 
 ```bash
-git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git ~/.openclaw/skills/xiaohongshu-skill
+npx skills add DeliciousBuding/xiaohongshu-skill
 ```
 
-After install, restart OpenClaw so it reloads Skill metadata.
+The repository root is the Skill root. `SKILL.md` contains the thin agent entry point; detailed command and safety material is kept under `docs/`.
 
-## Cursor and Cline
+## Workflow tools
 
-Cursor and Cline can use the repository as an agent-readable Skill folder if your setup supports local Skills. If your setup expects MCP servers only, use this project as a CLI tool from the agent shell.
+Any tool that can execute a process and parse JSON can use the CLI. A typical read-only flow is:
 
-Recommended shell check:
+1. Run `check-login`.
+2. Run `search`.
+3. Select a result and retain its current-session identifiers.
+4. Run `feed` or `user`.
+5. Store structured output after removing account-sensitive fields.
+
+A write flow must pause for user confirmation before starting the mutation command.
+
+## Publish integration rule
+
+Treat publish states as follows:
+
+- `confirmed`: success.
+- `ready`: prepared, not submitted.
+- `submitted_unconfirmed`: indeterminate; review manually and do not retry automatically.
+- `failed`: failure.
+
+Exit code `2` is used for an indeterminate submission or another incomplete interactive outcome. Consumers must inspect JSON instead of treating every nonzero code as safely retryable.
+
+## Contract discovery
 
 ```bash
-python -m scripts check-login
-python -m scripts search "旅行攻略" --limit=3
+uv run python -m scripts contracts
+uv run python -m scripts selectors
 ```
 
-Profile example:
-
-```bash
-python -m scripts --profile brand-a search "旅行攻略" --limit=3
-```
-
-## n8n
-
-Use an Execute Command node to call the CLI, then parse JSON in the next node.
-
-Example command:
-
-```bash
-python -m scripts search "上海 brunch" --limit=5
-```
-
-For write actions, add a manual approval node before the command node.
-
-## Output Contract
-
-Search returns:
-
-```json
-{
-  "count": 1,
-  "results": [
-    {
-      "id": "note-id",
-      "xsec_token": "token-from-search",
-      "title": "笔记标题",
-      "user": "作者"
-    }
-  ]
-}
-```
-
-Errors return:
-
-```json
-{
-  "status": "error",
-  "error_type": "CaptchaError",
-  "message": "触发小红书安全验证"
-}
-```
+The contract output is intended for discovery and diagnostics. Stable required fields are defined in `scripts/output_contracts.py`; named browser targets are defined in `scripts/selectors.py`.

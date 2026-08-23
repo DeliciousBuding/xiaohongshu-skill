@@ -1,129 +1,81 @@
-# 贡献指南
+# Contributing
 
-欢迎参与 xiaohongshu-skill。
+Contributions are welcome. Search existing issues before starting a change that affects public behavior or command contracts.
 
-## 如何参与
-
-在动手之前，建议先到 [GitHub Issues](https://github.com/DeliciousBuding/xiaohongshu-skill/issues) 中搜索或发起讨论，确认你的想法与项目方向一致，避免重复劳动。
-
-### 报告问题
-
-- 使用 Bug Report 模板提交 issue
-- 尽可能附上复现步骤、期望行为、实际行为、环境信息（OS、Python 版本）
-- 如果涉及报错，附上完整的错误信息和堆栈
-
-### 提功能建议
-
-- 先搜索已有 issue，避免重复
-- 使用 Feature Request 模板
-- 描述清楚使用场景和期望效果
-
-## 开发流程
-
-### 分支策略
-
-1. 从 `main` 分支创建 feature 分支：`git checkout -b feature/xxx`
-2. 在 feature 分支上开发和测试
-3. 推送到远程并创建 Pull Request 到 `main`
-4. 等待 review，通过后合并
-
-分支命名规范：
-- `feature/xxx`：新功能
-- `fix/xxx`：问题修复
-- `docs/xxx`：文档更新
-- `chore/xxx`：杂项（依赖更新、CI 配置等）
-
-### 开发环境搭建
+## Development environment
 
 ```bash
-# 1. 克隆仓库
 git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
 cd xiaohongshu-skill
-
-# 2. 创建虚拟环境（推荐）
-python -m venv .venv
-source .venv/bin/activate   # Linux/macOS
-.venv\Scripts\activate      # Windows
-
-# 3. 安装依赖
-pip install -r requirements.txt
-
-# 4. 安装 Playwright 浏览器
-playwright install chromium
-
-# 5. 运行测试确认环境正常
-python -m pytest -q
+uv sync --frozen --group dev
+uv run playwright install chromium
+uv run python -m scripts.quality check
 ```
 
-### 代码风格
+The lockfile is committed. Dependency updates must update `pyproject.toml` and `uv.lock` in the same pull request.
 
-- 遵循 [PEP 8](https://peps.python.org/pep-0008/) 规范
-- 不做过度抽象，保持代码直白可读
-- 函数和类添加 docstring，说明用途和参数
-- 优先使用标准库，减少不必要的第三方依赖
+## Branches and commits
 
-### 提交规范
+Create a focused branch from `main`:
 
-使用 [Conventional Commits](https://www.conventionalcommits.org/) 格式：
-
-```
-feat: 添加定时发布功能
-fix: 修复搜索页码越界问题
-docs: 补充 Docker 部署文档
-chore: 升级 playwright 到 1.42
-test: 增加发布模块的单元测试
-refactor: 提取公共的 xsec_token 校验逻辑
+```text
+feat/<topic>
+fix/<topic>
+docs/<topic>
+chore/<topic>
 ```
 
-### 测试要求
+Use Conventional Commits such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, and `chore:`. Keep commits reviewable and squash temporary work before merge.
 
-- 新功能必须附带测试用例
-- 修改核心逻辑（`client.py`、`login.py`、`search.py` 等）需确保已有测试仍然通过
-- 修改浏览器选择器时同步 `scripts/selectors.py`，并运行 `python -m pytest tests/test_selectors.py -q`
-- 默认测试不得访问真实账号、真实站点或打开长期浏览器会话
-- `live` / `e2e` 测试必须显式设置 `XHS_LIVE_TEST=1` 后运行
-- 运行 `python -m pytest -q` 确认默认测试通过后再提交
-
-常用检查：
+## Required checks
 
 ```bash
-python -m scripts.quality check
-python -m scripts.quality contracts
+uv run python -m scripts.quality check
 ```
 
-Windows PowerShell:
+This command covers public documentation, Pages content, ruff, pytest, contract smoke tests, and Agent Skills frontmatter validation.
 
-```powershell
-.\make.ps1 check
-```
-
-只读 live 冒烟测试：
+Useful targeted checks:
 
 ```bash
-python -m scripts.quality live
+uv run pytest tests/test_publish.py -q
+uv run pytest tests/test_selectors.py -q
+uv run ruff check scripts tests
+uv build
 ```
 
-Windows PowerShell：
+Default tests must not access Xiaohongshu. Do not add skip markers to hide failures. Live tests require `XHS_LIVE_TEST=1` and a dedicated account.
 
-```powershell
-.\make.ps1 live
-```
+## Change rules
 
-### Pull Request 检查清单
+### Browser selectors
 
-- [ ] 代码符合 PEP 8 风格
-- [ ] 新功能有对应的测试用例
-- [ ] 默认检查通过（`python -m scripts.quality check`）
-- [ ] 如果改了 CLI 输出字段，已同步 `scripts/output_contracts.py`
-- [ ] 如果改了浏览器选择器，已同步 `scripts/selectors.py`
-- [ ] 提交信息符合 Conventional Commits 规范
-- [ ] 如有破坏性变更，已在 PR 描述中说明
-- [ ] 没有引入新的第三方依赖（除非必要并已说明理由）
+Update or add a named `SelectorContract` when the selector is shared, safety-critical, agent-facing, or expected to change across page versions. Runtime constants must derive from the contract rather than duplicate its string value.
 
-## 沟通准则
+### JSON output
 
-- 保持友善和尊重
-- 就事论事，聚焦技术讨论
-- PR review 意见是对代码不对人
+Update `scripts/output_contracts.py` and tests when an agent-facing field or status changes. New fields should be backward-compatible within the 1.x series.
 
-谢谢你的贡献。
+### Publishing
+
+Do not treat a click as proof of publication. New publish paths must return `confirmed`, `submitted_unconfirmed`, `failed`, or `ready` with the documented semantics.
+
+### Session storage
+
+Use temporary directories in tests. Never read a contributor's real account profile. Persistent-state changes require corruption, compatibility, and rollback tests.
+
+### Documentation
+
+Public files must use generic paths and neutral product language. Do not include private infrastructure, local workspace names, credentials, account data, or internal execution notes.
+
+## Pull requests
+
+A pull request should include:
+
+- The user-visible problem and chosen behavior.
+- Tests for the changed behavior.
+- Output or selector contract changes when applicable.
+- Documentation changes when installation, safety, or public behavior changed.
+- A note when upstream code or behavior influenced the implementation.
+
+Repository rules require CI before merge. Write operations against a real account are never required for a contributor pull request.

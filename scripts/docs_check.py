@@ -15,13 +15,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-
 DEFAULT_TARGETS = [
     "README.md",
     "README_EN.md",
     "SKILL.md",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "CHANGELOG.md",
     "docs",
     "examples",
     ".github",

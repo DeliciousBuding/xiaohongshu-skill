@@ -9,7 +9,8 @@ xiaohongshu-skill 是一个 Claude Code Skill，Claude 会自动加载 `SKILL.md
 ```bash
 git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git
 cd xiaohongshu-skill
-pip install -r requirements.txt
+uv sync --frozen --no-dev
+uv run playwright install chromium
 playwright install chromium
 ```
 

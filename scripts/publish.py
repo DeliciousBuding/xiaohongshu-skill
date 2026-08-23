@@ -6,16 +6,141 @@
 """
 
 import os
+import random
+import re
 import sys
 import time
-import random
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
-from .client import XiaohongshuClient, DEFAULT_COOKIE_PATH
 from ._utils import is_element_blocked
+from .client import CAPTCHA_URL_PATTERNS, DEFAULT_COOKIE_PATH, XiaohongshuClient
 
 PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official"
+PUBLISH_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Shanghai")
+PUBLISH_STATUS_CONFIRMED = "confirmed"
+PUBLISH_STATUS_SUBMITTED_UNCONFIRMED = "submitted_unconfirmed"
+PUBLISH_STATUS_FAILED = "failed"
+TITLE_LENGTH_WARNING_THRESHOLD = 20
+SCHEDULE_FORMAT = "%Y-%m-%d %H:%M"
+MIN_SCHEDULE_DELAY = timedelta(hours=1)
+MAX_SCHEDULE_DELAY = timedelta(days=14)
+LOGIN_URL_MARKERS = ("/login", "passport", "signin")
+TRUSTED_CONFIRMATION_HOSTS = ("creator.xiaohongshu.com",)
+FAILED_DESTINATION_MARKERS = ("/error", "/404", "/500", "/maintenance")
+
+
+@dataclass(frozen=True)
+class PublishConfirmation:
+    """Result of clicking publish and observing the browser afterwards."""
+
+    status: str
+    message: str
+    signal: str
+    url: str = ""
+
+    @property
+    def success(self) -> bool:
+        """Only an observed confirmation signal counts as success."""
+        return self.status == PUBLISH_STATUS_CONFIRMED
+
+
+@dataclass(frozen=True)
+class PublishValidation:
+    """Validated local inputs and non-blocking platform-limit warnings."""
+
+    schedule_at: Optional[datetime]
+    warnings: tuple[str, ...]
+    media_paths: tuple[str, ...] = ()
+
+
+def _normalize_now(now: Optional[datetime]) -> datetime:
+    """Return ``now`` in the platform scheduling timezone."""
+    if now is None:
+        return datetime.now(PUBLISH_TIMEZONE)
+    if now.tzinfo is None:
+        return now.replace(tzinfo=PUBLISH_TIMEZONE)
+    return now.astimezone(PUBLISH_TIMEZONE)
+
+
+def validate_schedule_time(
+    schedule_time: Optional[str],
+    *,
+    now: Optional[datetime] = None,
+) -> Optional[datetime]:
+    """Validate a scheduled publish time in Asia/Shanghai.
+
+    Scheduled publishing accepts the local format ``YYYY-MM-DD HH:MM`` and
+    must be between one hour and fourteen days from ``now``, inclusively.
+    """
+    if schedule_time is None:
+        return None
+    if (
+        not isinstance(schedule_time, str)
+        or re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", schedule_time) is None
+    ):
+        raise ValueError(f"定时发布时间格式应为 {SCHEDULE_FORMAT}")
+
+    try:
+        parsed = datetime.strptime(schedule_time, SCHEDULE_FORMAT).replace(
+            tzinfo=PUBLISH_TIMEZONE,
+        )
+    except ValueError as exc:
+        raise ValueError(f"定时发布时间格式应为 {SCHEDULE_FORMAT}") from exc
+
+    delta = parsed - _normalize_now(now)
+    if delta < MIN_SCHEDULE_DELAY or delta > MAX_SCHEDULE_DELAY:
+        raise ValueError("定时发布时间必须在当前时间 1 小时至 14 天之间（Asia/Shanghai）")
+    return parsed
+
+
+def validate_media_paths(media_paths: List[str]) -> tuple[str, ...]:
+    """Require every local media path to be a readable regular file."""
+    if not media_paths:
+        raise ValueError("至少需要一个媒体文件")
+
+    validated = []
+    for raw_path in media_paths:
+        path = Path(raw_path).expanduser()
+        if not path.is_file():
+            raise ValueError(f"媒体文件不存在或不是普通文件: {raw_path}")
+        try:
+            with path.open("rb"):
+                pass
+        except OSError as exc:
+            raise ValueError(f"媒体文件不可读: {raw_path}") from exc
+        validated.append(str(path.resolve()))
+    return tuple(validated)
+
+
+def validate_publish_request(
+    *,
+    title: str,
+    media_paths: Optional[List[str]] = None,
+    schedule_time: Optional[str] = None,
+    now: Optional[datetime] = None,
+) -> PublishValidation:
+    """Validate stable local requirements before opening the publish page."""
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError("标题不能为空")
+    validated_media = validate_media_paths(media_paths) if media_paths is not None else ()
+
+    warnings = []
+    if len(title) > TITLE_LENGTH_WARNING_THRESHOLD:
+        warnings.append(
+            f"标题长度为 {len(title)}，超过当前建议的 {TITLE_LENGTH_WARNING_THRESHOLD} 字；"
+            "平台限制可能变化，请在发布页复核"
+        )
+
+    schedule_at = validate_schedule_time(schedule_time, now=now)
+    return PublishValidation(
+        schedule_at=schedule_at,
+        warnings=tuple(warnings),
+        media_paths=validated_media,
+    )
 
 
 @dataclass
@@ -467,6 +592,7 @@ class PublishAction:
             print(f"定时发布设置: {schedule_time}", file=sys.stderr)
         except Exception as e:
             print(f"设置定时发布失败: {e}", file=sys.stderr)
+            raise RuntimeError("设置定时发布失败，已阻止继续发布") from e
 
     def _click_publish_button(self) -> bool:
         """点击发布按钮
@@ -533,6 +659,188 @@ class PublishAction:
             print(f"点击发布按钮失败: {e}", file=sys.stderr)
             return False
 
+    @staticmethod
+    def _safe_page_url(page) -> str:
+        """Read the current page URL without trusting mock or browser errors."""
+        try:
+            current_url = page.url
+            return current_url if isinstance(current_url, str) else ""
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _url_location(url: str) -> tuple[str, str]:
+        """Return a query-independent URL location for transition checks."""
+        try:
+            parsed = urlsplit(url)
+            return parsed.netloc.lower(), parsed.path.rstrip("/").lower()
+        except ValueError:
+            return "", ""
+
+    @staticmethod
+    def _is_publish_workflow_url(url: str) -> bool:
+        """Return whether a URL still belongs to the creator publish flow."""
+        host, path = PublishAction._url_location(url)
+        return host == "creator.xiaohongshu.com" and "/publish" in path
+
+    @staticmethod
+    def _redirect_failure_signal(url: str) -> Optional[str]:
+        """Classify login and security-verification redirects."""
+        lowered = url.lower()
+        if any(pattern.lower() in lowered for pattern in CAPTCHA_URL_PATTERNS):
+            return "captcha_redirect"
+        if any(marker in lowered for marker in LOGIN_URL_MARKERS):
+            return "login_redirect"
+        return None
+
+    def _publish_success_feedback_count(self) -> int:
+        """Count visible success feedback nodes for pre/post-click comparison."""
+        try:
+            feedback = self.client.page.get_by_text("发布成功", exact=False)
+            return sum(
+                1
+                for index in range(feedback.count())
+                if feedback.nth(index).is_visible()
+            )
+        except Exception:
+            return 0
+
+    def _has_security_challenge(self) -> bool:
+        """Reuse the client URL/title checks without accepting mock truthiness."""
+        try:
+            return self.client._check_captcha() is True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _is_trusted_post_publish_url(url: str) -> bool:
+        """Accept only known creator-host destinations as a URL success signal."""
+        host, path = PublishAction._url_location(url)
+        if host not in TRUSTED_CONFIRMATION_HOSTS:
+            return False
+        if any(marker in path for marker in FAILED_DESTINATION_MARKERS):
+            return False
+        return "/publish" not in path
+
+    def _wait_for_publish_confirmation(
+        self,
+        *,
+        initial_url: Optional[str] = None,
+        initial_success_feedback_count: int = 0,
+        timeout: float = 15.0,
+        poll_interval: float = 0.5,
+        monotonic=None,
+        sleep=None,
+    ) -> PublishConfirmation:
+        """Observe post-click signals and never infer success from the click alone."""
+        monotonic = monotonic or time.monotonic
+        sleep = sleep or time.sleep
+        deadline = monotonic() + timeout
+        initial_url = initial_url or self._safe_page_url(self.client.page)
+        initial_location = self._url_location(initial_url)
+        initial_was_publish = self._is_publish_workflow_url(initial_url)
+        last_url = initial_url
+
+        while monotonic() < deadline:
+            current_url = self._safe_page_url(self.client.page)
+            if current_url:
+                last_url = current_url
+                failure_signal = self._redirect_failure_signal(current_url)
+                if failure_signal:
+                    message = (
+                        "发布后进入安全验证页面"
+                        if failure_signal == "captcha_redirect"
+                        else "发布后进入登录页面"
+                    )
+                    return PublishConfirmation(
+                        status=PUBLISH_STATUS_FAILED,
+                        message=message,
+                        signal=failure_signal,
+                        url=current_url,
+                    )
+
+            if self._has_security_challenge():
+                return PublishConfirmation(
+                    status=PUBLISH_STATUS_FAILED,
+                    message="发布后进入安全验证页面",
+                    signal="captcha_detected",
+                    url=current_url,
+                )
+
+            if self._publish_success_feedback_count() > initial_success_feedback_count:
+                return PublishConfirmation(
+                    status=PUBLISH_STATUS_CONFIRMED,
+                    message="已观察到发布成功提示",
+                    signal="success_feedback",
+                    url=current_url,
+                )
+
+            current_location = self._url_location(current_url)
+            if (
+                initial_was_publish
+                and current_location != initial_location
+                and self._is_trusted_post_publish_url(current_url)
+            ):
+                return PublishConfirmation(
+                    status=PUBLISH_STATUS_CONFIRMED,
+                    message="发布后已离开发布页面",
+                    signal="url_left_publish_flow",
+                    url=current_url,
+                )
+
+            sleep(poll_interval)
+
+        return PublishConfirmation(
+            status=PUBLISH_STATUS_SUBMITTED_UNCONFIRMED,
+            message="已点击发布，但未观察到成功信号，请人工复核",
+            signal="confirmation_timeout",
+            url=last_url,
+        )
+
+    def _publish_and_confirm(
+        self,
+        *,
+        timeout: float = 15.0,
+        poll_interval: float = 0.5,
+        monotonic=None,
+        sleep=None,
+    ) -> PublishConfirmation:
+        """Click publish and return a trustworthy confirmation state."""
+        initial_url = self._safe_page_url(self.client.page)
+        initial_success_feedback_count = self._publish_success_feedback_count()
+        if not self._click_publish_button():
+            return PublishConfirmation(
+                status=PUBLISH_STATUS_FAILED,
+                message="未能点击发布按钮",
+                signal="click_failed",
+                url=self._safe_page_url(self.client.page),
+            )
+        return self._wait_for_publish_confirmation(
+            initial_url=initial_url,
+            initial_success_feedback_count=initial_success_feedback_count,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            monotonic=monotonic,
+            sleep=sleep,
+        )
+
+    @staticmethod
+    def _confirmation_fields(confirmation: PublishConfirmation) -> Dict[str, Any]:
+        """Expose stable compatibility fields for CLI and Python callers."""
+        return {
+            "status": confirmation.status,
+            "success": confirmation.success,
+            "published": confirmation.success,
+            "message": confirmation.message,
+            "confirmation_signal": confirmation.signal,
+            "confirmation_url": confirmation.url,
+        }
+
+    @staticmethod
+    def _emit_validation_warnings(validation: PublishValidation) -> None:
+        for warning in validation.warnings:
+            print(f"警告: {warning}", file=sys.stderr)
+
     def _check_publish_ready(self) -> Dict[str, Any]:
         """检查发布前的状态（三要素校验）"""
         page = self.client.page
@@ -582,11 +890,19 @@ class PublishAction:
         Returns:
             操作结果
         """
+        validation = validate_publish_request(
+            title=title,
+            media_paths=image_paths,
+            schedule_time=schedule_time,
+        )
+        self._emit_validation_warnings(validation)
+        validated_image_paths = list(validation.media_paths or tuple(image_paths))
+
         self._navigate_to_publish()
         self._click_publish_tab("上传图文")
 
         # 1. 上传图片
-        self._upload_images(image_paths)
+        self._upload_images(validated_image_paths)
         time.sleep(random.uniform(1.5, 3.0))
 
         # 2. 填写标题
@@ -622,31 +938,33 @@ class PublishAction:
 
         # 9. 是否自动发布
         if auto_publish:
-            success = self._click_publish_button()
-            return {
-                "status": "success" if success else "error",
+            confirmation = self._publish_and_confirm()
+            result = {
                 "action": "publish_image",
                 "title": title,
-                "image_count": len(image_paths),
+                "image_count": len(validated_image_paths),
                 "tags": tags or [],
                 "schedule_time": schedule_time,
                 "is_original": is_original,
                 "visibility": visibility,
-                "published": success,
-                "message": "发布成功" if success else "发布失败",
+                "warnings": list(validation.warnings),
             }
+            result.update(self._confirmation_fields(confirmation))
+            return result
         else:
             return {
                 "status": "ready",
                 "action": "publish_image",
                 "title": title,
-                "image_count": len(image_paths),
+                "image_count": len(validated_image_paths),
                 "tags": tags or [],
                 "schedule_time": schedule_time,
                 "is_original": is_original,
                 "visibility": visibility,
+                "success": False,
                 "published": False,
                 "ready_check": ready,
+                "warnings": list(validation.warnings),
                 "message": "已填写完毕，停在发布按钮处。请确认后使用 --auto-publish 发布。",
             }
 
@@ -677,11 +995,19 @@ class PublishAction:
         Returns:
             操作结果
         """
+        validation = validate_publish_request(
+            title=title,
+            media_paths=[video_path],
+            schedule_time=schedule_time,
+        )
+        self._emit_validation_warnings(validation)
+        validated_video_path = (validation.media_paths or (video_path,))[0]
+
         self._navigate_to_publish()
         self._click_publish_tab("上传视频")
 
         # 1. 上传视频
-        self._upload_video(video_path)
+        self._upload_video(validated_video_path)
         time.sleep(random.uniform(1.5, 3.0))
 
         # 2. 填写标题
@@ -716,27 +1042,31 @@ class PublishAction:
         print(f"发布前校验: {ready}", file=sys.stderr)
 
         if auto_publish:
-            success = self._click_publish_button()
-            return {
-                "status": "success" if success else "error",
+            confirmation = self._publish_and_confirm()
+            result = {
                 "action": "publish_video",
                 "title": title,
                 "video_path": video_path,
+                "schedule_time": schedule_time,
                 "is_original": is_original,
                 "visibility": visibility,
-                "published": success,
-                "message": "发布成功" if success else "发布失败",
+                "warnings": list(validation.warnings),
             }
+            result.update(self._confirmation_fields(confirmation))
+            return result
         else:
             return {
                 "status": "ready",
                 "action": "publish_video",
                 "title": title,
                 "video_path": video_path,
+                "schedule_time": schedule_time,
                 "is_original": is_original,
                 "visibility": visibility,
+                "success": False,
                 "published": False,
                 "ready_check": ready,
+                "warnings": list(validation.warnings),
                 "message": "已填写完毕，停在发布按钮处。请确认后使用 --auto-publish 发布。",
             }
 
@@ -761,6 +1091,8 @@ class PublishAction:
         Returns:
             操作结果
         """
+        validation = validate_publish_request(title=title)
+        self._emit_validation_warnings(validation)
         page = self.client.page
 
         # 1. 导航到创作者中心发布页
@@ -860,20 +1192,22 @@ class PublishAction:
 
         # 9. 是否自动发布
         if auto_publish:
-            success = self._click_publish_button()
-            return {
-                "status": "success" if success else "error",
+            confirmation = self._publish_and_confirm()
+            result = {
                 "action": "publish_longform",
                 "title": title,
-                "published": success,
-                "message": "长文发布成功" if success else "长文发布失败",
+                "warnings": list(validation.warnings),
             }
+            result.update(self._confirmation_fields(confirmation))
+            return result
         else:
             return {
                 "status": "ready",
                 "action": "publish_longform",
                 "title": title,
+                "success": False,
                 "published": False,
+                "warnings": list(validation.warnings),
                 "message": "长文已填写完毕，停在发布页。请确认后使用 --auto-publish 发布。",
             }
 
@@ -1111,6 +1445,13 @@ def publish_markdown(
     Returns:
         操作结果
     """
+    validation = validate_publish_request(
+        title=title,
+        schedule_time=schedule_time,
+    )
+    for warning in validation.warnings:
+        print(f"警告: {warning}", file=sys.stderr)
+
     import tempfile
     if not output_dir:
         output_dir = tempfile.mkdtemp(prefix="xhs_md_")

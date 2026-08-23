@@ -2,11 +2,12 @@
 SOP 编排引擎单元测试
 """
 
-import tempfile
 import os
+import tempfile
+
 import pytest
 
-from scripts.sop import SOPEngine, run_publish_sop, run_comment_sop, run_explore_sop
+from scripts.sop import SOPEngine, run_comment_sop, run_explore_sop, run_publish_sop
 from scripts.strategy import StrategyManager
 
 

@@ -15,22 +15,24 @@ import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-from . import __version__
-from .client import XiaohongshuClient, CaptchaError
-from .profiles import ProfileNameError, list_profiles, profile_paths
-from . import login
-from . import search
-from . import feed
-from . import user
-from . import comment
-from . import interact
-from . import explore
-from . import publish
+from . import (
+    __version__,
+    comment,
+    explore,
+    feed,
+    interact,
+    login,
+    publish,
+    search,
+    sop,
+    strategy,
+    templates,
+    user,
+)
+from .client import CaptchaError, XiaohongshuClient
 from .output_contracts import get_output_contracts
+from .profiles import ProfileNameError, list_profiles, profile_paths
 from .selectors import get_selector_contracts
-from . import templates
-from . import strategy
-from . import sop
 
 
 def format_output(data) -> str:
@@ -154,6 +156,27 @@ def cmd_check_login(args):
         "is_logged_in": is_logged_in,
         "username": username,
     }))
+    return 0
+
+
+def cmd_creator_login(args):
+    """登录创作者中心（发布前需要）。"""
+    result = login.creator_login(
+        headless=_headless(args),
+        cookie_path=_cookie_path(args),
+        timeout=args.timeout,
+    )
+    print(format_output(result))
+    return 0 if result.get("status") == "logged_in" else 1
+
+
+def cmd_check_creator_login(args):
+    """检查创作者中心登录状态。"""
+    is_logged_in = login.check_creator_login(
+        cookie_path=_cookie_path(args),
+        headless=_headless(args),
+    )
+    print(format_output({"is_logged_in": is_logged_in}))
     return 0
 
 
@@ -356,6 +379,16 @@ def cmd_explore(args):
     return 0
 
 
+def _publish_exit_code(result):
+    """Map publish confirmation states to stable CLI exit codes."""
+    status = result.get("status")
+    if status in {"confirmed", "ready"}:
+        return 0
+    if status == "submitted_unconfirmed":
+        return 2
+    return 1
+
+
 def cmd_publish(args):
     """发布图文笔记"""
     image_paths = [p.strip() for p in args.images.split(",") if p.strip()]
@@ -371,7 +404,7 @@ def cmd_publish(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_video(args):
@@ -388,7 +421,7 @@ def cmd_publish_video(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_md(args):
@@ -419,7 +452,7 @@ def cmd_publish_md(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_longform(args):
@@ -432,7 +465,7 @@ def cmd_publish_longform(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_reply_notification(args):
@@ -561,6 +594,23 @@ def main():
     chk_p = subparsers.add_parser("check-login", help="检查登录状态")
     chk_p.add_argument("--headless", default='true')
     chk_p.set_defaults(func=cmd_check_login)
+
+    # creator-login
+    creator_login_p = subparsers.add_parser(
+        "creator-login",
+        help="登录创作者中心（发布前需要）",
+    )
+    creator_login_p.add_argument("--timeout", "-t", type=int, default=240, help="登录超时秒数")
+    creator_login_p.add_argument("--headless", default='false', help="默认 false 以显示浏览器")
+    creator_login_p.set_defaults(func=cmd_creator_login)
+
+    # check-creator-login
+    creator_check_p = subparsers.add_parser(
+        "check-creator-login",
+        help="检查创作者中心登录状态",
+    )
+    creator_check_p.add_argument("--headless", default='true', help="无头模式: true/false（默认 true）")
+    creator_check_p.set_defaults(func=cmd_check_creator_login)
 
     # logout
     logout_p = subparsers.add_parser("logout", help="删除登录状态（Cookie 和浏览器数据）")

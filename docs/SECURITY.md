@@ -1,33 +1,55 @@
 # Security
 
-Last updated: 2026-07-06
+This project controls a real browser session and stores authentication state locally. Use a dedicated test account before enabling write operations.
 
-This project controls a real browser session. Treat local browser state as sensitive.
+## Local state
 
-## What Is Stored Locally
+Each profile may contain:
 
-- Browser profile data under the user's Xiaohongshu profile directory.
-- Cookie backup data when the CLI saves cookies.
-- QR code images under `data/` during login.
-- Strategy state created by the strategy commands.
+- Playwright persistent browser state.
+- A backward-compatible Cookie backup.
+- Versioned session metadata with a fingerprint seed and timestamp.
+- QR images and local command output under `data/`.
+- Strategy state created by strategy commands.
 
-Named account profiles created with `--profile` use separate cookie and browser profile directories. Use them when one machine operates multiple accounts.
+Do not commit, upload, or attach these files. The repository ignore rules and Docker build exclusions cover the known local paths, but users remain responsible for files copied elsewhere.
 
-`profiles` is read-only. It reports local profile names and whether local state files exist.
+Session metadata and Cookie backups use atomic replacement to reduce partial writes. Invalid session metadata is replaced with a new seed without printing the previous value.
 
-Do not commit runtime data. The repository `.gitignore` excludes the known local files.
+## Browser sandbox
 
-## Public Issue Rules
+Chromium sandbox remains enabled by default. `XHS_ALLOW_NO_SANDBOX=true` is available only for isolated environments that explicitly require it. Do not set this variable for normal desktop use.
 
-When opening an issue, remove:
+The Docker image runs as a non-root user and keeps account state in mounted host directories.
+
+## Agent write boundary
+
+The following commands change account state:
+
+- `publish`, `publish-video`, `publish-md`, `publish-longform`
+- `comment`, `reply`, `reply-notification`
+- `like`, `collect`, `unlike`, `uncollect`
+- `logout`
+
+An agent must show the target account and planned change, then obtain explicit user confirmation before execution.
+
+A `submitted_unconfirmed` publish result means the site may have accepted the submission. Do not retry automatically because that can create duplicate posts.
+
+## Captcha and verification
+
+Stop automation when the browser reaches a captcha, login, or security-verification page. Use headed mode and let the user complete the step. This project does not provide captcha bypass.
+
+## Public issue rules
+
+Remove the following before opening a public issue:
 
 - Account names, phone numbers, email addresses, and profile links.
-- Cookie values and browser profile files.
-- Full `xsec_token` values. Keep only a short prefix if needed.
-- Screenshots that show private messages, account pages, notifications, or QR codes.
-- Local machine paths that include a user name or private workspace name.
+- Authentication values and local browser profile files.
+- Full `xsec_token` values.
+- QR codes and screenshots of account, notification, or private-message pages.
+- Local machine paths containing user names or private workspace names.
 
-Use placeholders:
+Use generic placeholders such as:
 
 ```text
 /path/to/image.jpg
@@ -37,28 +59,17 @@ note-id
 xsec_token-prefix...
 ```
 
-## Agent Safety Rules
-
-- Ask before write commands.
-- Keep `auto_publish` off unless the user explicitly asks to publish.
-- Use separate `--profile` values for separate accounts.
-- Stop on captcha or verification pages.
-- Use headed mode when the site asks for manual action.
-- Do not run bulk scraping loops from public examples.
-
-## Maintainer Checks
-
-Run these before release:
+## Maintainer checks
 
 ```bash
-python -m scripts.quality check
-python -m scripts.quality contracts
+uv run python -m scripts.quality check
+docker build -t xiaohongshu-skill:check .
 ```
 
-`scripts.docs_check` scans public Markdown for private paths, common secret shapes, and writing patterns that should not ship.
-
-Live and e2e tests are separate from release checks. Run them only with a test account:
+Live tests are separate and opt-in:
 
 ```bash
-python -m scripts.quality live
+XHS_LIVE_TEST=1 uv run pytest tests/live -q -m live
 ```
+
+Use only a dedicated test account and keep live tests read-only unless a specific write test has been reviewed and approved.

@@ -1,6 +1,4 @@
-"""
-Cross-platform quality task runner for contributors and CI.
-"""
+"""Cross-platform quality task runner for contributors and CI."""
 
 from __future__ import annotations
 
@@ -10,8 +8,7 @@ import subprocess
 import sys
 from collections.abc import Mapping, Sequence
 
-
-TASKS = ("check", "test", "lint", "docs-check", "live", "site", "contracts")
+TASKS = ("check", "test", "lint", "docs-check", "live", "site", "contracts", "skill")
 
 
 def _run(
@@ -59,11 +56,14 @@ def command_plan(task: str, *, port: int = 8000) -> list[list[str]]:
             [python, "-m", "scripts", "contracts"],
             [python, "-m", "scripts", "selectors"],
         ],
+        "skill": [[python, "-m", "scripts.skill_check"]],
     }
     plans["check"] = [
         *plans["docs-check"],
         *plans["lint"],
         *plans["test"],
+        *plans["contracts"],
+        *plans["skill"],
     ]
     return plans[task]
 

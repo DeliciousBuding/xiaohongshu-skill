@@ -4,20 +4,28 @@
 基于 xiaohongshu-mcp Go 源码翻译为 Python Playwright
 """
 
+import hashlib
 import json
 import os
 import random
 import time
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 
 from ._logging import get_logger
 from ._utils import unwrap_value
 from .profiles import env_profile, profile_paths
+from .session_store import atomic_write_json, resolve_fingerprint_seed
 
 log = get_logger(__name__)
 
 try:
-    from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page, Playwright
+    from playwright.sync_api import (
+        Browser,
+        BrowserContext,
+        Page,
+        Playwright,
+        sync_playwright,
+    )
 except ImportError:
     print("请先安装 playwright: pip install playwright && playwright install chromium")
     raise
@@ -77,6 +85,11 @@ class XiaohongshuClient:
         paths = profile_paths(env_profile())
         self.cookie_path = cookie_path or str(paths.cookie_path)
         self.user_data_dir = user_data_dir or str(paths.user_data_dir)
+        self.session_path = str(
+            paths.session_path
+            if cookie_path is None
+            else os.path.join(os.path.dirname(self.cookie_path), "session.json")
+        )
         self.timeout = timeout * 1000  # 转换为毫秒
 
         self.playwright: Optional[Playwright] = None
@@ -89,8 +102,8 @@ class XiaohongshuClient:
         self._navigate_count: int = 0
         self._session_start: float = 0.0
 
-        # 加载 stealth JS（内置 + 可选外部覆盖）
-        self._stealth_js = self._load_stealth_js()
+        # start() 时解析 profile seed，避免构造客户端就读取会话文件。
+        self._stealth_js = ""
 
     def __enter__(self):
         self.start()
@@ -99,18 +112,22 @@ class XiaohongshuClient:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def _load_stealth_js(self) -> str:
-        """加载 stealth JS：内置脚本 + 可选外部覆盖文件"""
-        js = self.STEALTH_JS
+    def _load_stealth_js(self, seed: str) -> str:
+        """Build stealth JS from a stable profile seed and optional local overrides."""
+        seed_number = int.from_bytes(
+            hashlib.sha256(seed.encode("utf-8")).digest()[:4],
+            "big",
+        )
+        js = self.STEALTH_JS.replace("__XHS_FINGERPRINT_SEED__", str(seed_number))
         if os.path.exists(self.STEALTH_JS_PATH):
             try:
-                with open(self.STEALTH_JS_PATH, 'r', encoding='utf-8') as f:
-                    external = f.read()
+                with open(self.STEALTH_JS_PATH, "r", encoding="utf-8") as handle:
+                    external = handle.read()
                 if external.strip():
-                    js += "\n// === 外部 stealth.js 覆盖 ===\n" + external
-                    log.info("已加载外部 stealth.js: %s", self.STEALTH_JS_PATH)
-            except Exception as e:
-                log.warning("加载外部 stealth.js 失败: %s", e)
+                    js += "\n// === External stealth.js overrides ===\n" + external
+                    log.info("Loaded external stealth.js overrides")
+            except Exception:
+                log.warning("Unable to load external stealth.js overrides")
         return js
 
     # 反检测隐身脚本：覆盖 headless Chromium 的自动化特征
@@ -183,26 +200,44 @@ class XiaohongshuClient:
         }
     });
 
-    // 8. Canvas 指纹随机化
-    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-    HTMLCanvasElement.prototype.toDataURL = function(type) {
-        const ctx = this.getContext('2d');
-        if (ctx) {
+    // 8. Stable per-profile Canvas fingerprint
+    const __xhsFingerprintSeed = __XHS_FINGERPRINT_SEED__;
+    const __xhsCanvasNoise = (width, height) => {
+        let state = (__xhsFingerprintSeed
+            ^ Math.imul(width + 1, 0x9e3779b1)
+            ^ Math.imul(height + 1, 0x85ebca6b)) >>> 0;
+        state = (state + 0x6d2b79f5) >>> 0;
+        let mixed = Math.imul(state ^ (state >>> 15), state | 1);
+        mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+        return ((mixed ^ (mixed >>> 14)) >>> 0);
+    };
+    const __xhsNoisyCanvas = (canvas) => {
+        if (!canvas.width || !canvas.height) return canvas;
+        const clone = document.createElement('canvas');
+        clone.width = canvas.width;
+        clone.height = canvas.height;
+        const ctx = clone.getContext('2d');
+        if (!ctx) return canvas;
+        ctx.drawImage(canvas, 0, 0);
+        try {
             const imageData = ctx.getImageData(0, 0, 1, 1);
-            imageData.data[0] = imageData.data[0] ^ (Math.random() * 2 | 0);
+            const noise = __xhsCanvasNoise(canvas.width, canvas.height);
+            imageData.data[0] ^= noise & 0xff;
+            imageData.data[1] ^= (noise >>> 8) & 0xff;
+            imageData.data[2] ^= (noise >>> 16) & 0xff;
             ctx.putImageData(imageData, 0, 0);
+        } catch (_) {
+            return canvas;
         }
-        return origToDataURL.apply(this, arguments);
+        return clone;
+    };
+    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function() {
+        return origToDataURL.apply(__xhsNoisyCanvas(this), arguments);
     };
     const origToBlob = HTMLCanvasElement.prototype.toBlob;
-    HTMLCanvasElement.prototype.toBlob = function(callback, type, quality) {
-        const origCtx = this.getContext('2d');
-        if (origCtx) {
-            const id = origCtx.getImageData(0, 0, 1, 1);
-            id.data[0] = id.data[0] ^ (Math.random() * 2 | 0);
-            origCtx.putImageData(id, 0, 0);
-        }
-        return origToBlob.apply(this, arguments);
+    HTMLCanvasElement.prototype.toBlob = function() {
+        return origToBlob.apply(__xhsNoisyCanvas(this), arguments);
     };
 
     // 9. 修复 headless 模式下的 outerWidth/outerHeight
@@ -214,6 +249,22 @@ class XiaohongshuClient:
         """启动浏览器（持久化上下文，自动保存全部会话状态）"""
         self.playwright = sync_playwright().start()
         os.makedirs(self.user_data_dir, exist_ok=True)
+        seed = resolve_fingerprint_seed(self.session_path)
+        self._stealth_js = self._load_stealth_js(seed)
+        browser_args = [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=AutomationControlled",
+            "--disable-infobars",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+        ]
+        if os.environ.get("XHS_ALLOW_NO_SANDBOX", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            browser_args.append("--no-sandbox")
 
         # 使用持久化上下文：自动保存 cookies + localStorage + sessionStorage + indexedDB
         self.context = self.playwright.chromium.launch_persistent_context(
@@ -223,14 +274,7 @@ class XiaohongshuClient:
             user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             locale='zh-CN',
             timezone_id='Asia/Shanghai',
-            args=[
-                '--disable-blink-features=AutomationControlled',
-                '--disable-features=AutomationControlled',
-                '--no-sandbox',
-                '--disable-infobars',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-            ],
+            args=browser_args,
             ignore_default_args=['--enable-automation'],
         )
         self.browser = None  # persistent context 无需单独的 browser 对象
@@ -264,32 +308,34 @@ class XiaohongshuClient:
             self.playwright.stop()
 
     def _load_cookies(self):
-        """从文件加载 Cookie"""
-        if not os.path.exists(self.cookie_path):
+        """Load the legacy cookie-list backup without changing its format."""
+        if not os.path.exists(self.cookie_path) or not self.context:
             return
 
         try:
-            with open(self.cookie_path, 'r', encoding='utf-8') as f:
-                cookies = json.load(f)
+            with open(self.cookie_path, "r", encoding="utf-8") as handle:
+                cookies = json.load(handle)
+            if not isinstance(cookies, list) or not all(
+                isinstance(cookie, dict) for cookie in cookies
+            ):
+                raise ValueError("cookie backup must be a JSON array")
             if cookies:
                 self.context.add_cookies(cookies)
-                log.info("已加载 %d 个 Cookie", len(cookies))
-        except Exception as e:
-            log.warning("加载 Cookie 失败: %s", e)
+                log.info("Loaded %d cookies from backup", len(cookies))
+        except Exception:
+            log.warning("Unable to load cookie backup; continuing with browser profile")
 
     def _save_cookies(self):
-        """保存 Cookie 到文件"""
+        """Atomically save cookies in the legacy JSON-array format."""
         if not self.context:
             return
 
         try:
             cookies = self.context.cookies()
-            os.makedirs(os.path.dirname(self.cookie_path), exist_ok=True)
-            with open(self.cookie_path, 'w', encoding='utf-8') as f:
-                json.dump(cookies, f, ensure_ascii=False, indent=2)
-            log.info("已保存 %d 个 Cookie 到 %s", len(cookies), self.cookie_path)
-        except Exception as e:
-            log.warning("保存 Cookie 失败: %s", e)
+            atomic_write_json(self.cookie_path, cookies)
+            log.info("Saved %d cookies to backup", len(cookies))
+        except Exception:
+            log.warning("Unable to save cookie backup")
 
     def _throttle(self):
         """请求频率控制：模拟人类浏览节奏"""

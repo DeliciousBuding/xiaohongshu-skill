@@ -5,8 +5,8 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from scripts.interact import InteractAction
 from scripts.client import XiaohongshuClient
+from scripts.interact import InteractAction
 
 
 class TestGetInteractState:
