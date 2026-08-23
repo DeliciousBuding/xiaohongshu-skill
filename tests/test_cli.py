@@ -156,3 +156,21 @@ class TestCLIContracts:
         assert parsed["count"] == 1
         assert parsed["contracts"][0]["command"] == "search"
         assert parsed["contracts"][0]["required_fields"] == ["count", "results"]
+
+class TestPublishExitCodes:
+    def test_confirmed_and_ready_are_successful(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "confirmed"}) == 0
+        assert _publish_exit_code({"status": "ready"}) == 0
+
+    def test_unconfirmed_submission_is_indeterminate(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "submitted_unconfirmed"}) == 2
+
+    def test_failed_submission_is_failure(self):
+        from scripts.__main__ import _publish_exit_code
+
+        assert _publish_exit_code({"status": "failed"}) == 1
+        assert _publish_exit_code({"status": "error"}) == 1

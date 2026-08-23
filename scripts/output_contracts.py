@@ -142,13 +142,21 @@ OUTPUT_CONTRACTS: tuple[OutputContract, ...] = (
         name="publish_image.result",
         command="publish",
         purpose="Image-text publish preparation or publish result",
-        required_fields=("status", "action", "title", "image_count", "published", "message"),
+        required_fields=(
+            "status", "action", "title", "image_count", "success", "published",
+            "message", "warnings",
+        ),
+        notes="status is ready, confirmed, submitted_unconfirmed, or failed; never retry submitted_unconfirmed automatically",
     ),
     OutputContract(
         name="publish_video.result",
         command="publish-video",
         purpose="Video publish preparation or publish result",
-        required_fields=("status", "action", "title", "video_path", "published", "message"),
+        required_fields=(
+            "status", "action", "title", "video_path", "schedule_time", "success",
+            "published", "message", "warnings",
+        ),
+        notes="status is ready, confirmed, submitted_unconfirmed, or failed; never retry submitted_unconfirmed automatically",
     ),
     OutputContract(
         name="publish_md.result",
@@ -161,7 +169,10 @@ OUTPUT_CONTRACTS: tuple[OutputContract, ...] = (
         name="publish_longform.result",
         command="publish-longform",
         purpose="Longform publish preparation or publish result",
-        required_fields=("status", "action", "title", "published", "message"),
+        required_fields=(
+            "status", "action", "title", "success", "published", "message", "warnings",
+        ),
+        notes="status is ready, confirmed, submitted_unconfirmed, or failed; never retry submitted_unconfirmed automatically",
     ),
     OutputContract(
         name="template.result",

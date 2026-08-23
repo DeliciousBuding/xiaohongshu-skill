@@ -358,6 +358,16 @@ def cmd_explore(args):
     return 0
 
 
+def _publish_exit_code(result):
+    """Map publish confirmation states to stable CLI exit codes."""
+    status = result.get("status")
+    if status in {"confirmed", "ready"}:
+        return 0
+    if status == "submitted_unconfirmed":
+        return 2
+    return 1
+
+
 def cmd_publish(args):
     """发布图文笔记"""
     image_paths = [p.strip() for p in args.images.split(",") if p.strip()]
@@ -373,7 +383,7 @@ def cmd_publish(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_video(args):
@@ -390,7 +400,7 @@ def cmd_publish_video(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_md(args):
@@ -421,7 +431,7 @@ def cmd_publish_md(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_publish_longform(args):
@@ -434,7 +444,7 @@ def cmd_publish_longform(args):
         cookie_path=_cookie_path(args),
     )
     print(format_output(result))
-    return 0 if result.get("status") in ("success", "ready") else 1
+    return _publish_exit_code(result)
 
 
 def cmd_reply_notification(args):
