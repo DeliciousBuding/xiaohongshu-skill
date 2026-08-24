@@ -1,495 +1,573 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Xiaohongshu Skill for AI Agents</title>
-    <meta name="description" content="Xiaohongshu and RedNote Skill for AI agents. Search notes, read details, publish drafts, and run browser automation with Python Playwright.">
-    <meta name="keywords" content="Xiaohongshu, RedNote, 小红书, xhs, RED, AI agent, AgentSkill, Playwright, skills.sh, ClawHub, Claude Code, Codex, OpenClaw">
-    <meta name="robots" content="index,follow,max-image-preview:large">
-    <meta name="author" content="DeliciousBuding">
-    <meta name="application-name" content="xiaohongshu-skill">
-    <meta property="og:title" content="Xiaohongshu Skill for AI Agents">
-    <meta property="og:description" content="A Python Playwright Skill for search, note details, publishing workflows, and agent-safe Xiaohongshu automation.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://deliciousbuding.github.io/xiaohongshu-skill/">
-    <meta property="og:image" content="https://deliciousbuding.github.io/xiaohongshu-skill/og-image.svg">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Xiaohongshu Skill for AI Agents">
-    <meta name="twitter:description" content="Install a Xiaohongshu and RedNote AgentSkill for Python Playwright automation.">
-    <meta name="twitter:image" content="https://deliciousbuding.github.io/xiaohongshu-skill/og-image.svg">
-    <link rel="canonical" href="https://deliciousbuding.github.io/xiaohongshu-skill/">
-    <link rel="sitemap" type="application/xml" href="sitemap.xml">
-    <link rel="alternate" type="text/plain" href="llms.txt" title="LLM summary for xiaohongshu-skill">
-    <link rel="alternate" type="text/plain" href="llms-full.txt" title="Full LLM reference for xiaohongshu-skill">
-    <script type="application/ld+json">
-      [
-        {
-          "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          "name": "xiaohongshu-skill",
-          "alternateName": ["Xiaohongshu Skill", "RedNote Skill", "小红书 Skill", "xhs skill"],
-          "applicationCategory": "DeveloperApplication",
-          "applicationSubCategory": "AgentSkill",
-          "operatingSystem": "Windows, macOS, Linux",
-          "programmingLanguage": "Python",
-          "softwareRequirements": "Python 3.10+, Playwright Chromium",
-          "license": "https://opensource.org/licenses/Apache-2.0",
-          "isAccessibleForFree": true,
-          "codeRepository": "https://github.com/DeliciousBuding/xiaohongshu-skill",
-          "url": "https://deliciousbuding.github.io/xiaohongshu-skill/",
-          "downloadUrl": "https://github.com/DeliciousBuding/xiaohongshu-skill",
-          "sameAs": [
-            "https://github.com/DeliciousBuding/xiaohongshu-skill",
-            "https://www.skills.sh/deliciousbuding/xiaohongshu-skill",
-            "https://deliciousbuding.github.io/xiaohongshu-skill/llms.txt"
-          ],
-          "keywords": "Xiaohongshu, RedNote, 小红书, xhs, AI agent, AgentSkill, Playwright, skills.sh, ClawHub, Claude Code, Codex, OpenClaw",
-          "description": "Xiaohongshu and RedNote Skill for AI agents using Python Playwright. It supports search, note detail reads, publish drafts, profiles, selector contracts, and agent-safe automation."
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "SoftwareSourceCode",
-          "name": "xiaohongshu-skill",
-          "codeRepository": "https://github.com/DeliciousBuding/xiaohongshu-skill",
-          "programmingLanguage": "Python",
-          "runtimePlatform": "Python 3.10+",
-          "license": "https://opensource.org/licenses/Apache-2.0",
-          "description": "Python Playwright CLI and AgentSkill for Xiaohongshu and RedNote automation."
-        }
-      ]
-    </script>
-    <style>
-      :root {
-        color-scheme: light;
-        --ink: #171717;
-        --muted: #59606a;
-        --line: #d8dde4;
-        --soft: #f7f8fa;
-        --soft-2: #fff8f0;
-        --accent: #c91d2e;
-        --accent-dark: #9d1725;
-        --blue: #2257bd;
-        --green: #177245;
-        --code: #111820;
-      }
-      * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
-      body {
-        margin: 0;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: var(--ink);
-        background: #ffffff;
-        line-height: 1.5;
-      }
-      a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-      header {
-        position: sticky;
-        top: 0;
-        z-index: 3;
-        border-bottom: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.96);
-      }
-      .nav {
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 14px 24px;
-        display: flex;
-        justify-content: space-between;
-        gap: 18px;
-        align-items: center;
-      }
-      .brand {
-        color: var(--ink);
-        font-weight: 750;
-        text-decoration: none;
-        white-space: nowrap;
-      }
-      .nav-links {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 12px 16px;
-        font-size: 14px;
-      }
-      .nav-links a { color: #303741; }
-      main {
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 38px 24px 72px;
-      }
-      .hero {
-        display: grid;
-        gap: 28px;
-        padding: 12px 0 24px;
-      }
-      .kicker {
-        margin: 0 0 12px;
-        color: var(--accent-dark);
-        font-size: 14px;
-        font-weight: 750;
-        letter-spacing: 0.02em;
-        text-transform: uppercase;
-      }
-      h1 {
-        max-width: 980px;
-        margin: 0;
-        font-size: clamp(40px, 7vw, 74px);
-        line-height: 1.01;
-        letter-spacing: 0;
-      }
-      .lead {
-        margin: 18px 0 0;
-        max-width: 760px;
-        font-size: 19px;
-        color: #303741;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 24px;
-      }
-      .button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-        padding: 0 16px;
-        border: 1px solid var(--accent);
-        border-radius: 6px;
-        background: var(--accent);
-        color: #ffffff;
-        font-weight: 700;
-        text-decoration: none;
-      }
-      .button.secondary {
-        background: #ffffff;
-        color: var(--accent-dark);
-      }
-      .showcase {
-        display: grid;
-        grid-template-columns: minmax(0, 0.96fr) minmax(320px, 1.04fr);
-        gap: 20px;
-        align-items: stretch;
-      }
-      .terminal {
-        border: 1px solid #222b35;
-        border-radius: 8px;
-        overflow: hidden;
-        background: var(--code);
-        color: #edf2f7;
-        min-width: 0;
-      }
-      .terminal-bar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        min-height: 36px;
-        padding: 0 14px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      .dot { width: 10px; height: 10px; border-radius: 50%; background: #ef665b; }
-      .dot:nth-child(2) { background: #f5bd4f; }
-      .dot:nth-child(3) { background: #61c554; }
-      pre {
-        margin: 0;
-        padding: 18px;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-        font: 14px/1.55 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      }
-      .visual {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--soft);
-        padding: 16px;
-        display: grid;
-        align-content: center;
-        min-width: 0;
-      }
-      .visual img {
-        display: block;
-        width: 100%;
-        height: auto;
-        border-radius: 6px;
-      }
-      .facts {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-        margin-top: 18px;
-      }
-      .fact {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #ffffff;
-        padding: 14px;
-      }
-      .fact strong { display: block; font-size: 18px; }
-      .fact span { color: var(--muted); font-size: 14px; }
-      .section {
-        margin-top: 56px;
-        border-top: 1px solid var(--line);
-        padding-top: 30px;
-      }
-      .section h2 {
-        margin: 0 0 12px;
-        font-size: 28px;
-        line-height: 1.15;
-      }
-      .section p {
-        max-width: 840px;
-        margin: 0 0 16px;
-        color: var(--muted);
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-      }
-      .tile {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 18px;
-        background: var(--soft);
-      }
-      .tile h3 {
-        margin: 0 0 8px;
-        font-size: 18px;
-      }
-      .tile p {
-        margin: 0;
-        font-size: 15px;
-      }
-      .commands {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-      }
-      .command {
-        border-left: 4px solid var(--green);
-        background: #f3fbf7;
-        padding: 14px 16px;
-        border-radius: 6px;
-        overflow-wrap: anywhere;
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-        font-size: 14px;
-      }
-      .split {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
-      }
-      .panel {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 18px;
-        background: #ffffff;
-      }
-      .panel h3 {
-        margin: 0 0 10px;
-        font-size: 18px;
-      }
-      .panel ul {
-        margin: 0;
-        padding-left: 20px;
-        color: var(--muted);
-      }
-      .panel li { margin: 7px 0; }
-      .link-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      .link-list a {
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        padding: 8px 10px;
-        background: #ffffff;
-        color: #303741;
-        font-size: 14px;
-        text-decoration: none;
-      }
-      .search-terms {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
-      }
-      .term {
-        border: 1px solid #f0c9ce;
-        border-radius: 999px;
-        background: #fff6f7;
-        color: var(--accent-dark);
-        padding: 6px 10px;
-        font-size: 14px;
-      }
-      footer {
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 28px 24px 48px;
-        color: var(--muted);
-        border-top: 1px solid var(--line);
-      }
-      @media (max-width: 900px) {
-        header { position: static; }
-        main { padding-top: 30px; }
-        .nav { align-items: flex-start; flex-direction: column; }
-        .nav-links { justify-content: flex-start; }
-        .showcase, .facts, .grid, .commands, .split { grid-template-columns: 1fr; }
-      }
-      @media (max-width: 520px) {
-        main { padding-left: 18px; padding-right: 18px; }
-        .actions { flex-direction: column; align-items: stretch; }
-        h1 { font-size: 38px; }
-        .lead { font-size: 17px; }
-        pre { font-size: 12px; }
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <nav class="nav" aria-label="Primary">
-        <a class="brand" href="./">xiaohongshu-skill</a>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xiaohongshu Skill for AI Agents</title>
+  <meta name="description" content="A production-grade Python Playwright skill for AI agents to search, read, publish, and operate Xiaohongshu and RedNote with approval-gated writes and clean JSON output.">
+  <meta name="keywords" content="Xiaohongshu, RedNote, 小红书, xhs, RED, AI agent, AgentSkill, Playwright, skills.sh, ClawHub, Claude Code, Codex, OpenClaw">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="DeliciousBuding">
+  <meta name="application-name" content="xiaohongshu-skill">
+  <meta name="theme-color" content="#FF2442">
+
+  <!-- Open Graph / social -->
+  <meta property="og:site_name" content="xiaohongshu-skill">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Xiaohongshu Skill for AI Agents">
+  <meta property="og:description" content="Search, read, publish, and operate Xiaohongshu & RedNote through Python Playwright. Approval-gated writes, clean JSON, AgentSkill-ready.">
+  <meta property="og:url" content="https://deliciousbuding.github.io/xiaohongshu-skill/">
+  <meta property="og:image" content="https://deliciousbuding.github.io/xiaohongshu-skill/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+
+  <!-- X / Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Xiaohongshu Skill for AI Agents">
+  <meta name="twitter:description" content="Python Playwright AgentSkill for search, note details, publishing, and agent-safe Xiaohongshu automation.">
+  <meta name="twitter:image" content="https://deliciousbuding.github.io/xiaohongshu-skill/og-image.png">
+
+  <link rel="canonical" href="https://deliciousbuding.github.io/xiaohongshu-skill/">
+  <link rel="sitemap" type="application/xml" href="sitemap.xml">
+  <link rel="alternate" type="text/plain" href="llms.txt" title="LLM summary for xiaohongshu-skill">
+  <link rel="alternate" type="text/plain" href="llms-full.txt" title="Full LLM reference for xiaohongshu-skill">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23FF2442'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='Arial' font-weight='700'>书</text></svg>">
+
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://deliciousbuding.github.io/xiaohongshu-skill/#app",
+    "name": "xiaohongshu-skill",
+    "alternateName": [
+      "Xiaohongshu Skill",
+      "RedNote Skill",
+      "小红书 Skill",
+      "xhs skill"
+    ],
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "AgentSkill",
+    "operatingSystem": "Windows, macOS, Linux",
+    "programmingLanguage": "Python",
+    "softwareRequirements": "Python 3.10+, Playwright Chromium",
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "isAccessibleForFree": true,
+    "featureList": [
+      "Keyword search with filters",
+      "Note detail and user profile reads",
+      "Image, video, Markdown, and long-form publishing",
+      "Comments, replies, likes, and collections",
+      "Approval-gated write operations",
+      "Stable JSON output contracts",
+      "Session isolation via profiles"
+    ],
+    "codeRepository": "https://github.com/DeliciousBuding/xiaohongshu-skill",
+    "url": "https://deliciousbuding.github.io/xiaohongshu-skill/",
+    "downloadUrl": "https://github.com/DeliciousBuding/xiaohongshu-skill",
+    "sameAs": [
+      "https://github.com/DeliciousBuding/xiaohongshu-skill",
+      "https://www.skills.sh/deliciousbuding/xiaohongshu-skill",
+      "https://clawhub.ai/skills/xiaohongshu-skill",
+      "https://deliciousbuding.github.io/xiaohongshu-skill/llms.txt"
+    ],
+    "keywords": "Xiaohongshu, RedNote, 小红书, xhs, RED, AI agent, AgentSkill, Playwright, skills.sh, ClawHub, Claude Code, Codex, OpenClaw",
+    "description": "Xiaohongshu and RedNote skill for AI agents using Python Playwright. Search, read note details, prepare publish workflows, and run approval-gated automation with stable JSON output.",
+    "author": {
+      "@type": "Organization",
+      "name": "DeliciousBuding"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://github.com/DeliciousBuding",
+    "name": "DeliciousBuding",
+    "url": "https://github.com/DeliciousBuding"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://deliciousbuding.github.io/xiaohongshu-skill/#website",
+    "name": "xiaohongshu-skill",
+    "url": "https://deliciousbuding.github.io/xiaohongshu-skill/",
+    "about": {
+      "@id": "https://deliciousbuding.github.io/xiaohongshu-skill/#app"
+    },
+    "publisher": {
+      "@id": "https://github.com/DeliciousBuding"
+    }
+  }
+]
+</script>
+
+  <style>
+    :root {
+      --accent: #FF2442;
+      --accent-2: #FF5C7A;
+      --accent-ink: #D61136;
+      --ink: #0F1115;
+      --muted: #5B6169;
+      --line: #E9EBF0;
+      --surface: #FFFFFF;
+      --surface-2: #F6F7FA;
+      --code: #111827;
+      --green: #16A34A;
+      --amber: #F59E0B;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --shadow-sm: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+      --shadow-lg: 0 20px 45px -20px rgba(16,24,40,.28);
+      --ring: 0 0 0 4px rgba(255,36,66,.14);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--surface);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    .site-header {
+      position: sticky; top: 0; z-index: 50;
+      padding: 14px 0;
+    }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 8px 10px 8px 14px;
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+      backdrop-filter: saturate(180%) blur(14px);
+      box-shadow: var(--shadow-sm);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.02em; }
+    .brand .logo {
+      display: grid; place-items: center;
+      width: 38px; height: 38px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff; font-size: 19px; font-weight: 800;
+      box-shadow: 0 6px 14px -6px rgba(255,36,66,.7);
+    }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a {
+      padding: 8px 14px; border-radius: 999px;
+      color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14.5px;
+      transition: color .15s ease, background .15s ease;
+    }
+    .nav-links a:hover { color: var(--ink); background: var(--surface-2); }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 16px; border-radius: 999px;
+      background: var(--ink); color: #fff; text-decoration: none;
+      font-weight: 700; font-size: 14px;
+      transition: transform .15s ease, background .15s ease;
+    }
+    .nav-cta:hover { background: #1f2430; transform: translateY(-1px); }
+
+    /* Hero */
+    .hero { padding: 72px 0 40px; }
+    .hero-grid {
+      display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+      gap: 46px; align-items: center;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 13px; border-radius: 999px;
+      background: #FFF0F3; color: var(--accent-ink);
+      font-weight: 700; font-size: 13px;
+      border: 1px solid #FFD5DD;
+    }
+    .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    h1 {
+      margin: 18px 0 16px;
+      font-size: clamp(38px, 5.2vw, 58px);
+      line-height: 1.06; letter-spacing: -.035em; font-weight: 850;
+    }
+    h1 .grad {
+      background: linear-gradient(110deg, var(--accent) 0%, var(--accent-2) 55%, #FF8AA0 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero-sub {
+      max-width: 540px; margin: 0 0 28px;
+      color: var(--muted); font-size: 17.5px; line-height: 1.65;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      padding: 13px 22px; border-radius: 999px;
+      font-weight: 700; font-size: 15px; text-decoration: none;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; box-shadow: 0 12px 24px -10px rgba(255,36,66,.65); }
+    .btn-primary:hover { box-shadow: 0 16px 30px -10px rgba(255,36,66,.75); }
+    .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .btn-ghost:hover { border-color: #d5d9e1; }
+    .platforms { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 30px; }
+    .platforms .tag {
+      padding: 7px 13px; border-radius: 999px;
+      background: var(--surface-2); border: 1px solid var(--line);
+      color: var(--muted); font-size: 13px; font-weight: 600;
+    }
+
+    /* Terminal */
+    .terminal {
+      border-radius: var(--radius-lg);
+      background: var(--code);
+      color: #E8EDF4;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      border: 1px solid #222b38;
+    }
+    .term-bar { display: flex; align-items: center; gap: 7px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .term-bar .t-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-bar .t-dot:nth-child(1) { background: #FF5F57; }
+    .term-bar .t-dot:nth-child(2) { background: #FEBC2E; }
+    .term-bar .t-dot:nth-child(3) { background: #28C840; }
+    .term-bar .t-title { margin-left: 8px; color: #8B95A7; font-size: 12.5px; font-weight: 600; }
+    .term-body { padding: 22px 22px 26px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 13.5px; line-height: 1.7; }
+    .term-body .cmd { color: #F8FAFC; }
+    .term-body .prompt { color: #FF6B84; font-weight: 700; }
+    .term-body .json-key { color: #7DD3FC; }
+    .term-body .json-str { color: #A7F3D0; }
+    .term-body .muted { color: #8B95A7; }
+
+    /* Stats */
+    .stats {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px; margin-top: 54px;
+    }
+    .stat {
+      padding: 20px 18px; border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    }
+    .stat .k { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .02em; text-transform: uppercase; }
+    .stat .v { margin-top: 6px; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+
+    /* Sections */
+    section.block { padding: 64px 0; }
+    .eyebrow { color: var(--accent-ink); font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+    .block h2 { margin: 10px 0 14px; font-size: clamp(28px, 3.4vw, 38px); letter-spacing: -.025em; line-height: 1.12; font-weight: 820; }
+    .block .lede { max-width: 680px; color: var(--muted); font-size: 16.5px; margin-bottom: 34px; }
+
+    .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .card {
+      padding: 24px; border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: #ffd5dd; }
+    .card .ic {
+      display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px;
+      background: #FFF0F3; color: var(--accent-ink); margin-bottom: 16px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 18px; letter-spacing: -.01em; }
+    .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+    /* Install */
+    .install {
+      border-radius: var(--radius-lg); padding: 38px;
+      background: linear-gradient(160deg, #0F1115 0%, #1A1115 100%);
+      color: #fff; box-shadow: var(--shadow-lg);
+    }
+    .install h2 { color: #fff; }
+    .install .lede { color: #B7BDC9; }
+    .cmd-list { display: grid; gap: 12px; }
+    .cmd-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 14px 13px 18px; border-radius: 14px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
+    }
+    .cmd-row code {
+      flex: 1; min-width: 0; color: #E8EDF4;
+      font-family: "SFMono-Regular", Consolas, monospace; font-size: 13.5px;
+      overflow-wrap: anywhere;
+    }
+    .cmd-row .copy-btn {
+      flex: none; padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer;
+      transition: background .15s ease;
+    }
+    .cmd-row .copy-btn:hover { background: rgba(255,255,255,.16); }
+
+    /* Safety */
+    .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .panel { padding: 26px; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-sm); }
+    .panel.good { border-color: #D6F0E0; background: #F6FDF9; }
+    .panel.warn { border-color: #FFE3C4; background: #FFFBF3; }
+    .panel h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 18px; }
+    .panel .pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+    .pill.read { background: #DCF5E7; color: #15803D; }
+    .pill.write { background: #FFE9C9; color: #B45309; }
+    .panel ul { margin: 0; padding-left: 0; list-style: none; color: var(--muted); }
+    .panel li { position: relative; padding-left: 22px; margin: 9px 0; font-size: 14.5px; }
+    .panel li::before { content: ""; position: absolute; left: 0; top: 8px; width: 9px; height: 9px; border-radius: 50%; }
+    .panel.good li::before { background: var(--green); }
+    .panel.warn li::before { background: var(--amber); }
+
+    /* Platforms */
+    .plats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .plat {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px; border-radius: var(--radius-md);
+      background: var(--surface-2); border: 1px solid var(--line);
+      font-weight: 700; font-size: 15px;
+    }
+    .plat .dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); flex: none; }
+
+    /* Docs */
+    .docs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .doc {
+      padding: 18px; border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--line);
+      text-decoration: none; transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .doc:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .doc .t { font-weight: 750; margin-bottom: 4px; }
+    .doc .d { color: var(--muted); font-size: 13.5px; }
+
+    footer { padding: 44px 0 56px; border-top: 1px solid var(--line); margin-top: 24px; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; align-items: center; color: var(--muted); font-size: 14px; }
+    .footer-inner a { color: var(--muted); text-decoration: none; }
+    .footer-inner a:hover { color: var(--ink); }
+
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .cards, .stats, .plats, .docs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .split { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 560px) {
+      .cards, .stats, .plats, .docs { grid-template-columns: 1fr; }
+      .install { padding: 26px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <nav class="nav">
+        <a class="brand" href="./" style="text-decoration:none">
+          <span class="logo">书</span>
+          <span>xiaohongshu-skill</span>
+        </a>
         <div class="nav-links">
+          <a href="#features">Features</a>
           <a href="#install">Install</a>
-          <a href="#agents">Agents</a>
-          <a href="#discovery">LLM discovery</a>
-          <a href="demo.html">Demos</a>
-          <a href="llms.txt">llms.txt</a>
-          <a href="https://www.skills.sh/deliciousbuding/xiaohongshu-skill">skills.sh</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill">GitHub</a>
+          <a href="#safety">Safety</a>
+          <a href="#docs">Docs</a>
         </div>
+        <a class="nav-cta" href="https://github.com/DeliciousBuding/xiaohongshu-skill" target="_blank" rel="noopener">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
       </nav>
-    </header>
-    <main>
-      <section class="hero" aria-labelledby="hero-title">
-        <div>
-          <p class="kicker">Xiaohongshu · RedNote · 小红书 · AgentSkill</p>
-          <h1 id="hero-title">Xiaohongshu Skill for AI Agents</h1>
-          <p class="lead">Search notes, read detail pages, prepare publish flows, inspect selectors, and return JSON from a Python Playwright CLI that agents can call safely.</p>
-          <div class="actions">
-            <a class="button" href="#install">Install the Skill</a>
-            <a class="button secondary" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md">Command Reference</a>
-            <a class="button secondary" href="demo.html">Demo Outputs</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <div class="hero-grid">
+          <div>
+            <span class="badge"><span class="dot"></span> Apache-2.0 · Python · Playwright · AgentSkill</span>
+            <h1>Automate <span class="grad">Xiaohongshu &amp; RedNote</span> with AI agents</h1>
+            <p class="hero-sub">A production-grade skill for search, note details, publishing, and account-safe operations with clean JSON output and every write gated behind explicit approval.</p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="#install">Get started</a>
+              <a class="btn btn-ghost" href="https://github.com/DeliciousBuding/xiaohongshu-skill" target="_blank" rel="noopener">View source</a>
+            </div>
+            <div class="platforms">
+              <span class="tag">Claude Code</span>
+              <span class="tag">Codex</span>
+              <span class="tag">OpenClaw</span>
+              <span class="tag">ClawHub</span>
+              <span class="tag">skills.sh</span>
+              <span class="tag">Cursor</span>
+            </div>
+          </div>
+
+          <div class="terminal" aria-label="Terminal preview">
+            <div class="term-bar">
+              <span class="t-dot"></span><span class="t-dot"></span><span class="t-dot"></span>
+              <span class="t-title">xiaohongshu-skill</span>
+            </div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">xiaohongshu-skill search "上海咖啡" --limit=3</span></div>
+              <div class="muted" style="margin:10px 0 4px">{</div>
+              <div style="padding-left:14px"><span class="json-key">"count"</span>: <span class="json-str">3</span>,</div>
+              <div style="padding-left:14px"><span class="json-key">"results"</span>: [</div>
+              <div style="padding-left:28px">{ <span class="json-key">"title"</span>: <span class="json-str">"上海咖啡地图"</span>, <span class="json-key">"user"</span>: <span class="json-str">"demo_user"</span> },</div>
+              <div style="padding-left:28px"><span class="muted">…</span></div>
+              <div style="padding-left:14px">]</div>
+              <div>}</div>
+              <div class="muted" style="margin-top:14px">// writes stop for approval, read-only stays safe</div>
+            </div>
           </div>
         </div>
-        <div class="showcase" aria-label="Project preview">
-          <div class="terminal" aria-label="CLI example">
-            <div class="terminal-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-            <pre><code>npx skills add DeliciousBuding/xiaohongshu-skill
-pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git
-playwright install chromium
-xiaohongshu-skill qrcode --headless=false
-xiaohongshu-skill --profile brand-a search "上海咖啡" --limit=3
-xiaohongshu-skill selectors --owner=publish
-xiaohongshu-skill contracts --command=search</code></pre>
-          </div>
-          <figure class="visual">
-            <img src="og-image.svg" alt="xiaohongshu-skill terminal preview with Xiaohongshu and RedNote labels">
-          </figure>
-        </div>
-        <div class="facts" aria-label="Project facts">
-          <div class="fact"><strong>Python</strong><span>Playwright browser automation</span></div>
-          <div class="fact"><strong>JSON</strong><span>agent-readable command output</span></div>
-          <div class="fact"><strong>AgentSkill</strong><span>Claude Code, Codex, OpenClaw</span></div>
-          <div class="fact"><strong>Apache-2.0</strong><span>open source repository</span></div>
-        </div>
-      </section>
 
-      <section class="section" id="install">
-        <h2>Install paths</h2>
-        <p>Use the path that matches your agent runner. The skills.sh and ClawHub entries point people to public install surfaces, while the pip path gives shell users the CLI directly.</p>
-        <div class="commands">
-          <div class="command">npx skills add DeliciousBuding/xiaohongshu-skill</div>
-          <div class="command">clawhub install xiaohongshu-skill</div>
-          <div class="command">pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git</div>
-          <div class="command">git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git &lt;skills-dir&gt;/xiaohongshu-skill</div>
-          <div class="command">docker compose run --rm xiaohongshu search "美食"</div>
+        <div class="stats">
+          <div class="stat"><div class="k">Runtime</div><div class="v">Python 3.10+</div></div>
+          <div class="stat"><div class="k">Browser</div><div class="v">Playwright Chromium</div></div>
+          <div class="stat"><div class="k">Output</div><div class="v">Stable JSON</div></div>
+          <div class="stat"><div class="k">Writes</div><div class="v">Approval-gated</div></div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <section class="section" aria-labelledby="features-title">
-        <h2 id="features-title">What the Skill does</h2>
-        <div class="grid">
-          <article class="tile">
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="eyebrow">Capabilities</div>
+        <h2>Everything an agent needs, one skill</h2>
+        <p class="lede">Search, read, publish, and operate Xiaohongshu through a consistent CLI surface with safety and session isolation built in.</p>
+        <div class="cards">
+          <article class="card">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
             <h3>Search</h3>
             <p>Keyword search with sort, type, time, scope, and location filters.</p>
           </article>
-          <article class="tile">
+          <article class="card">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
             <h3>Read</h3>
-            <p>Fetch note details, comments, user pages, profile state, and explore feed data.</p>
+            <p>Note details, comments, user pages, profile state, and the explore feed.</p>
           </article>
-          <article class="tile">
+          <article class="card">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
             <h3>Publish</h3>
-            <p>Prepare image, video, Markdown-image, and long-form posts after user approval.</p>
+            <p>Image, video, Markdown-image, and long-form drafts after approval.</p>
           </article>
-          <article class="tile">
+          <article class="card">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg></div>
             <h3>Operate</h3>
-            <p>Use templates, daily limits, profiles, selectors, output contracts, and SOP commands.</p>
+            <p>Comments, replies, likes, collections, templates, limits, and SOPs.</p>
           </article>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="section" id="agents">
-        <h2>Agent interface</h2>
+    <section class="block" id="install" style="padding-top:0">
+      <div class="wrap">
+        <div class="install">
+          <div class="eyebrow" style="color:#FF8AA0">Install</div>
+          <h2>Five seconds to your agent</h2>
+          <p class="lede" style="color:#B7BDC9">Pick the surface that matches your runner: skills.sh and ClawHub for agent catalogs, pip for the shell.</p>
+          <div class="cmd-list">
+            <div class="cmd-row"><code>npx skills add DeliciousBuding/xiaohongshu-skill</code><button class="copy-btn" type="button">Copy</button></div>
+            <div class="cmd-row"><code>clawhub install xiaohongshu-skill</code><button class="copy-btn" type="button">Copy</button></div>
+            <div class="cmd-row"><code>pip install git+https://github.com/DeliciousBuding/xiaohongshu-skill.git</code><button class="copy-btn" type="button">Copy</button></div>
+            <div class="cmd-row"><code>git clone https://github.com/DeliciousBuding/xiaohongshu-skill.git &lt;skills-dir&gt;/xiaohongshu-skill</code><button class="copy-btn" type="button">Copy</button></div>
+            <div class="cmd-row"><code>docker compose run --rm xiaohongshu search "美食"</code><button class="copy-btn" type="button">Copy</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="safety">
+      <div class="wrap">
+        <div class="eyebrow">Safety model</div>
+        <h2>Reads run free. Writes ask first.</h2>
+        <p class="lede">The skill separates read-only commands from state-changing ones, so an agent can never publish or interact without explicit user approval.</p>
         <div class="split">
-          <article class="panel">
-            <h3>Read commands can run directly</h3>
+          <div class="panel good">
+            <h3>Read-only <span class="pill read">SAFE</span></h3>
             <ul>
               <li><code>search</code>, <code>feed</code>, <code>user</code>, <code>explore</code>, <code>me</code></li>
               <li><code>selectors</code> and <code>contracts</code> expose stable automation surfaces.</li>
-              <li><code>--profile &lt;name&gt;</code> isolates sessions for separate accounts.</li>
+              <li><code>--profile &lt;name&gt;</code> isolates sessions per account.</li>
             </ul>
-          </article>
-          <article class="panel">
-            <h3>Write commands need approval</h3>
+          </div>
+          <div class="panel warn">
+            <h3>Approval-gated <span class="pill write">CONFIRM</span></h3>
             <ul>
               <li><code>publish</code>, <code>comment</code>, <code>reply</code>, <code>like</code>, and <code>collect</code> change account state.</li>
               <li>The browser stops on captcha or verification pages.</li>
-              <li>Use live tests only with <code>XHS_LIVE_TEST=1</code> and a test account.</li>
+              <li>Live tests run only with <code>XHS_LIVE_TEST=1</code> and a dedicated account.</li>
             </ul>
-          </article>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="section" id="discovery">
-        <h2>LLM and search discovery</h2>
-        <p>This site exposes crawlable HTML, JSON-LD, canonical links, a sitemap, and two text files for agent indexers. The terms below are visible so search engines and agent catalogs can map the project to common user prompts.</p>
-        <div class="search-terms" aria-label="Search terms">
-          <span class="term">Xiaohongshu Skill</span>
-          <span class="term">RedNote Skill</span>
-          <span class="term">小红书 AI Agent</span>
-          <span class="term">xhs browser automation</span>
-          <span class="term">AgentSkill</span>
-          <span class="term">skills.sh</span>
-          <span class="term">ClawHub</span>
-          <span class="term">Claude Code</span>
-          <span class="term">Codex</span>
-          <span class="term">OpenClaw</span>
-          <span class="term">Python Playwright</span>
+    <section class="block" id="platforms-sec">
+      <div class="wrap">
+        <div class="eyebrow">Works with</div>
+        <h2>Drop it into your stack</h2>
+        <p class="lede">Compatible with the agent runners and catalogs people already use.</p>
+        <div class="plats">
+          <div class="plat"><span class="dot"></span> Claude Code</div>
+          <div class="plat"><span class="dot"></span> Codex</div>
+          <div class="plat"><span class="dot"></span> OpenClaw</div>
+          <div class="plat"><span class="dot"></span> ClawHub</div>
+          <div class="plat"><span class="dot"></span> skills.sh</div>
+          <div class="plat"><span class="dot"></span> Cursor</div>
+          <div class="plat"><span class="dot"></span> Cline</div>
+          <div class="plat"><span class="dot"></span> n8n</div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="section">
-        <h2>Docs for humans and agents</h2>
-        <p>These links point to the project pages most likely to answer install, command, safety, and integration questions.</p>
-        <div class="link-list">
-          <a href="llms.txt">llms.txt</a>
-          <a href="llms-full.txt">llms-full.txt</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md">Install</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md">Commands</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md">Integrations</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/SECURITY.md">Security</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/REFERENCE.md">Reference map</a>
-          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill/tree/main/examples">Examples</a>
+    <section class="block" id="docs" style="padding-top:0">
+      <div class="wrap">
+        <div class="eyebrow">Docs</div>
+        <h2>For humans and agents</h2>
+        <p class="lede">Public references for install, commands, integrations, and safety.</p>
+        <div class="docs">
+          <a class="doc" href="llms.txt"><div class="t">llms.txt</div><div class="d">Machine-readable project summary.</div></a>
+          <a class="doc" href="llms-full.txt"><div class="t">llms-full.txt</div><div class="d">Full LLM reference.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INSTALL.md"><div class="t">Install</div><div class="d">Setup for every platform.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/API.md"><div class="t">Commands</div><div class="d">CLI reference.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/INTEGRATIONS.md"><div class="t">Integrations</div><div class="d">Claude Code, Codex, n8n, more.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/SECURITY.md"><div class="t">Security</div><div class="d">Session and account safety.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/blob/main/docs/REFERENCE.md"><div class="t">Reference map</div><div class="d">Architecture and upstream attribution.</div></a>
+          <a class="doc" href="https://github.com/DeliciousBuding/xiaohongshu-skill/tree/main/examples"><div class="t">Examples</div><div class="d">Runnable snippets and fixtures.</div></a>
         </div>
-      </section>
-    </main>
-    <footer>
-      <p>Apache-2.0 licensed. Built for AgentSkills, Codex, Claude Code, OpenClaw, ClawHub, skills.sh, Hermes Agent, and shell-first automation.</p>
-    </footer>
-  </body>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-inner">
+        <div>© 2025–2026 DeliciousBuding · Apache-2.0</div>
+        <div>
+          <a href="https://github.com/DeliciousBuding/xiaohongshu-skill" target="_blank" rel="noopener">GitHub</a>
+          <span style="margin:0 10px;opacity:.4">·</span>
+          <a href="https://clawhub.ai/skills/xiaohongshu-skill" target="_blank" rel="noopener">ClawHub</a>
+          <span style="margin:0 10px;opacity:.4">·</span>
+          <a href="https://www.skills.sh/deliciousbuding/xiaohongshu-skill" target="_blank" rel="noopener">skills.sh</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var row = btn.closest('.cmd-row');
+        var code = row.querySelector('code').textContent;
+        var done = function () {
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(done, done);
+        } else {
+          done();
+        }
+      });
+    });
+  </script>
+</body>
 </html>
