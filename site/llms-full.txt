@@ -8,7 +8,7 @@ Project:
 - Repository: https://github.com/DeliciousBuding/xiaohongshu-skill
 - Pages: https://deliciousbuding.github.io/xiaohongshu-skill/
 - skills.sh: https://www.skills.sh/deliciousbuding/xiaohongshu-skill
-- License: MIT
+- License: Apache-2.0
 
 One-sentence summary:
 
