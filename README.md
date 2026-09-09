@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/deliciousbuding-xiaohongshu-skill-badge.png)](https://mseep.ai/app/deliciousbuding-xiaohongshu-skill)
+
 # xiaohongshu-skill
 
 [![CI](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/DeliciousBuding/xiaohongshu-skill/actions/workflows/ci.yml)
